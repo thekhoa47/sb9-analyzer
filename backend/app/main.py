@@ -23,7 +23,6 @@ from app.utils.parcel import get_parcel_geojson_with_props  # returns (geom, pro
 load_dotenv()  # loads backend/.env
 
 MAPBOX_TOKEN = os.getenv("MAPBOX_TOKEN", "")
-REGRID_TOKEN = os.getenv("REGRID_TOKEN", "")
 
 app = FastAPI(title="sb9-analyzer backend", version="0.2.0")
 
@@ -45,7 +44,7 @@ app.add_middleware(
 class MaskResult(BaseModel):
     address: str
     image_url: str
-    source: str  # parcel source: "regrid" or "oc_gis"
+    source: str  # parcel source: "oc_gis"
     matched_place_name: Optional[str] = None
     geocode_relevance: Optional[float] = None
     parcel_apn: Optional[str] = None
@@ -116,7 +115,7 @@ def debug_parcel(address: str,
 @app.get("/debug/parcel-stats")
 def debug_parcel_stats(address: str):
     lat, lon, _ = geocode_address(address, MAPBOX_TOKEN)
-    geom, props, source = get_parcel_geojson_with_props(lat, lon, REGRID_TOKEN)
+    geom, props, source = get_parcel_geojson_with_props(lat, lon)
 
     g = shape(geom)
     # project to meters (Web Mercator is fine for quick stats)
