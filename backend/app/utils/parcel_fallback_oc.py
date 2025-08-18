@@ -2,7 +2,7 @@ import requests
 
 OC_PARCELS_LAYER = "https://ocgis.com/arcpub/rest/services/Map_Layers/Parcels/MapServer/0/query"
 
-def get_oc_parcel_by_point_full(lat: float, lon: float, distance_m: float = 20.0):
+def get_oc_parcel_by_point_full(lat: float, lon: float):
     params = {
         "f": "geojson",
         "geometry": f"{lon},{lat}",

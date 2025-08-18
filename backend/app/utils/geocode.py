@@ -1,13 +1,75 @@
-# backend/app/utils/geocode.py
-import requests
+# app/utils/geocode.py
+from __future__ import annotations
 from typing import Optional, Tuple, Dict, Any, List
+import requests
+import urllib.parse
+
 
 def _compose_address(address: str, city: Optional[str], state: Optional[str], zip_code: Optional[str]) -> str:
     parts = [address]
     if city: parts.append(city)
     if state: parts.append(state)
     if zip_code: parts.append(zip_code)
-    return ", ".join([p for p in parts if p and p.strip()])
+    return " ".join([p for p in parts if p and p.strip()])
+
+
+def _score_feature(f: Dict[str, Any]) -> float:
+    """
+    Score a feature based on match_code hints.
+    Priority: address_number > street > postcode > place > region
+    """
+    props = f.get("properties", {})
+    mc: Dict[str, str] = props.get("match_code") or {}
+
+    score = 0.0
+
+    # Strong matches
+    if mc.get("address_number") == "matched":
+        score += 3.0
+    if mc.get("street") == "matched":
+        score += 2.0
+    if mc.get("postcode") == "matched":
+        score += 1.5
+    if mc.get("place") == "matched":
+        score += 1.0
+    if mc.get("region") == "matched":
+        score += 0.5
+
+    # Penalize unmatched or weird confidence
+    if mc.get("confidence") == "low":
+        score -= 1.0
+    elif mc.get("confidence") == "medium":
+        score -= 0.5
+
+    return score
+
+
+
+def _extract_context_parts(props: Dict[str, Any]) -> Dict[str, Optional[str]]:
+    ctx = props.get("context") or {}
+    parts: Dict[str, Optional[str]] = {"address": None, "postcode": None, "place": None, "region": None}
+
+    # v6 (object/dict) path
+    if isinstance(ctx, dict):
+        if isinstance(ctx.get("address"), dict):
+            parts["address"] = ctx["address"].get("name") or props.get("name") or props.get("full_address")
+        if isinstance(ctx.get("postcode"), dict):
+            parts["postcode"] = ctx["postcode"].get("name")
+        if isinstance(ctx.get("place"), dict):
+            parts["place"] = ctx["place"].get("name")
+        if isinstance(ctx.get("region"), dict):
+            parts["region"] = (
+                ctx["region"].get("region_code")
+                or ctx["region"].get("name")  # fallback if region_code missing
+            )
+            
+    # Final fallback for address
+    if not parts["address"]:
+        parts["address"] = props.get("name") or props.get("full_address")
+
+    return parts
+
+
 
 def geocode_address(
     address: str,
@@ -16,61 +78,63 @@ def geocode_address(
     state: Optional[str] = None,
     zip_code: Optional[str] = None,
     country: str = "US",
-    bbox: Optional[List[float]] = None,          # [minLon, minLat, maxLon, maxLat] in WGS84
-    proximity: Optional[Tuple[float, float]] = None,  # (lat, lon)
     limit: int = 5,
 ) -> Tuple[float, float, Dict[str, Any]]:
     """
-    Returns (lat, lon, meta) for the best address match.
-    meta includes 'matched_place_name', 'relevance', 'raw_feature'.
+    Returns (lat, lon, meta) for the best address match using Mapbox Geocoding API v6.
+    Selection:
+      1) Highest count from properties.match_code (most components matched)
+      2) Tiebreak by Mapbox relevance
+    meta includes:
+      - matched_place_name (feature.place_name fallback or composed)
+      - relevance
+      - official_parts: {address, city, state, zip}
+      - raw_feature
     """
     q = _compose_address(address, city, state, zip_code)
+    base = "https://api.mapbox.com/search/geocode/v6/forward"
     params = {
         "access_token": mapbox_token,
-        "limit": limit,
         "types": "address",
         "country": country,
         "autocomplete": "false",
-        "fuzzyMatch": "false",
+        "limit": str(limit),
+        "q": q,
     }
-    if bbox:
-        # bbox must be comma-separated string lon1,lat1,lon2,lat2
-        params["bbox"] = ",".join(str(x) for x in bbox)
-    if proximity:
-        plat, plon = proximity
-        params["proximity"] = f"{plon},{plat}"  # Mapbox wants lon,lat here
-
-    url = f"https://api.mapbox.com/geocoding/v5/mapbox.places/{q}.json"
-    r = requests.get(url, params=params, timeout=20)
+    # Some setups prefer putting q in path; v6 supports ?q= as well.
+    r = requests.get(base, params=params, timeout=20)
     r.raise_for_status()
     data = r.json()
-    feats = data.get("features", [])
-
+    feats: List[Dict[str, Any]] = data.get("features", []) or []
     if not feats:
         raise RuntimeError(f"Geocoding returned no results for: {q}")
 
-    # If city/state/zip provided, prefer candidates whose context matches them
-    def score_feature(f):
-        s = 0.0
-        ctx = f.get("context", []) + [ {"id": f.get("id",""), "text": f.get("text","")} ]
-        texts = {c.get("id",""): c.get("text","").lower() for c in ctx}
-
-        if city and city.lower() in "".join(texts.values()):
-            s += 2.0
-        if state and state.lower() in "".join(texts.values()):
-            s += 1.5
-        if zip_code and zip_code.lower() in "".join(texts.values()):
-            s += 1.0
-        # native relevance from Mapbox (0..1)
-        s += float(f.get("relevance", 0))
-        return s
-
-    feats_sorted = sorted(feats, key=score_feature, reverse=True)
+    # Sort by match_count (desc), then relevance
+    feats_sorted = sorted(feats, key=_score_feature)
     top = feats_sorted[0]
-    lon, lat = top["center"]  # Mapbox returns [lon, lat]
-    meta = {
-        "matched_place_name": top.get("place_name"),
-        "relevance": top.get("relevance"),
-        "raw_feature": top,
+
+    # Coordinates: Mapbox center is [lon, lat]
+    coordinates = top.get("geometry", {}).get("coordinates")
+    if not coordinates or len(coordinates) < 2:
+        raise RuntimeError("Geocoding result missing coordinates.")
+    lon, lat = coordinates[0], coordinates[1]
+
+    props = top.get("properties", {}) or {}
+    ctx_parts = _extract_context_parts(props)
+    # Build official parts in the keys you want for DB
+    official_parts = {
+        "address": ctx_parts.get("address"),
+        "city": ctx_parts.get("place"),
+        "state": ctx_parts.get("region"),
+        "zip": ctx_parts.get("postcode"),
+    }
+
+    # Human-friendly line
+    place_name = props.get("full_address") or q
+
+    meta: Dict[str, Any] = {
+        "matched_place_name": place_name,
+        "official_parts": official_parts,
+        "match_code": props.get("match_code"),
     }
     return lat, lon, meta

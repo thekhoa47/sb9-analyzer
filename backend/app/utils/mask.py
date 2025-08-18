@@ -22,7 +22,8 @@ def _exterior_only(geom):
 def mask_naip_with_parcel_mosaic(
     naip_hrefs: list,       # list of signed COG urls
     parcel_geojson: dict,   # GeoJSON (EPSG:4326)
-    out_png: str,
+    out_png: str = None,
+    return_image: bool = False,
     outline_px: int = 1,
     pad_meters: float = 20.0,
     dim_neighbors_alpha: int = 64,
@@ -106,5 +107,7 @@ def mask_naip_with_parcel_mosaic(
     draw.line(ring_px, width=line_w, fill=(255, 0, 0, 255))
 
     # 6) Save to PNG
-    img.save(out_png)
-    return out_png
+    if out_png:
+        img.save(out_png, "PNG")
+    if return_image:
+        return img
