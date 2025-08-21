@@ -1,3 +1,4 @@
+from fastapi import HTTPException
 import requests
 
 OC_PARCELS_LAYER = "https://ocgis.com/arcpub/rest/services/Map_Layers/Parcels/MapServer/0/query"
@@ -16,12 +17,12 @@ def get_oc_parcel_by_point_full(lat: float, lon: float):
         "outSR": 4326,
         "resultRecordCount": 3,
     }
-    r = requests.get(OC_PARCELS_LAYER, params=params, timeout=20)
+    r = requests.get(OC_PARCELS_LAYER, params=params, timeout=30)
     r.raise_for_status()
     data = r.json()
     feats = data.get("features") or []
     if not feats:
-        raise RuntimeError("OC GIS: no parcel near this point.")
+        raise HTTPException(status_code = 422, detail = "OC GIS: no parcel near this point.")
     f = feats[0]
     return f["geometry"], f.get("properties", {})
     # addresses = []

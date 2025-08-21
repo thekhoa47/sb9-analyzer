@@ -2,15 +2,7 @@
 from __future__ import annotations
 from typing import Optional, Tuple, Dict, Any, List
 import requests
-import urllib.parse
-
-
-def _compose_address(address: str, city: Optional[str], state: Optional[str], zip_code: Optional[str]) -> str:
-    parts = [address]
-    if city: parts.append(city)
-    if state: parts.append(state)
-    if zip_code: parts.append(zip_code)
-    return " ".join([p for p in parts if p and p.strip()])
+from fastapi import HTTPException
 
 
 def _score_feature(f: Dict[str, Any]) -> float:
@@ -74,9 +66,6 @@ def _extract_context_parts(props: Dict[str, Any]) -> Dict[str, Optional[str]]:
 def geocode_address(
     address: str,
     mapbox_token: str,
-    city: Optional[str] = None,
-    state: Optional[str] = None,
-    zip_code: Optional[str] = None,
     country: str = "US",
     limit: int = 5,
 ) -> Tuple[float, float, Dict[str, Any]]:
@@ -91,7 +80,7 @@ def geocode_address(
       - official_parts: {address, city, state, zip}
       - raw_feature
     """
-    q = _compose_address(address, city, state, zip_code)
+    q = address.strip()
     base = "https://api.mapbox.com/search/geocode/v6/forward"
     params = {
         "access_token": mapbox_token,
@@ -107,7 +96,7 @@ def geocode_address(
     data = r.json()
     feats: List[Dict[str, Any]] = data.get("features", []) or []
     if not feats:
-        raise RuntimeError(f"Geocoding returned no results for: {q}")
+        raise HTTPException(status_code=422, detail=f"Geocoding returned no results for: {q}")
 
     # Sort by match_count (desc), then relevance
     feats_sorted = sorted(feats, key=_score_feature)
@@ -116,7 +105,7 @@ def geocode_address(
     # Coordinates: Mapbox center is [lon, lat]
     coordinates = top.get("geometry", {}).get("coordinates")
     if not coordinates or len(coordinates) < 2:
-        raise RuntimeError("Geocoding result missing coordinates.")
+        raise HTTPException(status_code=422, detail="Geocoding result missing coordinates.")
     lon, lat = coordinates[0], coordinates[1]
 
     props = top.get("properties", {}) or {}

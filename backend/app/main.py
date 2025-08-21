@@ -1,6 +1,6 @@
 # backend/app/main.py
 
-from fastapi import FastAPI, Query, Request, Depends
+from fastapi import FastAPI, Query, Request, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from uuid import UUID
@@ -24,7 +24,7 @@ from app.utils.mask import mask_naip_with_parcel_mosaic  # will return PIL Image
 from app.utils.parcel import get_parcel_geojson_with_props
 from app.storage.r2 import upload_bytes_and_get_url
 from app.services.prepare_property import prepare_property
-from app.schemas import MaskResult, ParcelStats
+from app.schemas import MaskResult, ParcelStats, PrepImageRequest
 from app.models import Property, SB9Result
 from app.db import get_engine  # your engine factory
 from app.ml.sb9_model import SB9Runner
@@ -75,12 +75,6 @@ def get_db():
     finally:
         db.close()
 
-# ---------- Errors ----------
-
-@app.exception_handler(RuntimeError)
-async def runtime_handler(request: Request, exc: RuntimeError):
-    return JSONResponse(status_code=422, content={"detail": str(exc)})
-
 # ---------- Health ----------
 
 @app.get("/health")
@@ -91,13 +85,10 @@ def health():
 
 @app.post("/prep-image", response_model=MaskResult)
 def prep_image(
-    address: str,
-    city: Optional[str] = Query(None),
-    state: Optional[str] = Query(None),
-    zip: Optional[str] = Query(None),
+    req: PrepImageRequest,
     db: Session = Depends(get_db),
 ):
-    *_, mask = prepare_property(db, address, city, state, zip)
+    *_, mask = prepare_property(db, req.address)
     return mask
 
 # ---------- New one-shot analyze endpoint ----------
@@ -117,7 +108,10 @@ def analyze(
 
     # 2) infer (model loaded once via lifespan)
     if MODEL_RUNNER is None:
-        raise RuntimeError("SB9 model not loaded")
+        raise HTTPException(
+            status_code = 503,
+            detail=f"No geocoding results for '{req.address}'. Please check spelling."
+        )
     label, _conf, _probs = MODEL_RUNNER.predict_from_url(mask.image_url)
     # label should be one of your training classes, e.g., "ELIGIBLE"/"INELIGIBLE"
 

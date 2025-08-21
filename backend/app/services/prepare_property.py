@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from uuid import UUID
 from typing import Optional, Tuple
 from io import BytesIO
@@ -48,9 +48,6 @@ def mask_to_png_bytes(naip_hrefs, parcel_geojson, superres_factor: float = 4.0) 
 def prepare_property(
     db: Session,
     address: str,
-    city: Optional[str],
-    state: Optional[str],
-    zip: Optional[str],
 ) -> Tuple[str, MaskResult]:
     """
     Runs the same logic as /prep-image but returns (property_id, MaskResult)
@@ -58,7 +55,7 @@ def prepare_property(
     """
      # 1) Geocode (seed for parcel lookup)
     lat_seed, lon_seed, meta = geocode_address(
-        address, MAPBOX_TOKEN, city=city, state=state, zip_code=zip
+        address, MAPBOX_TOKEN
     )
 
     # Pull official postal parts (what we use for identity + display)
@@ -117,7 +114,7 @@ def prepare_property(
     assets = find_naip_assets_for_bbox(minx - pad_deg, miny - pad_deg, maxx + pad_deg, maxy + pad_deg, limit=12)
     hrefs = [a.href for a in assets]
     if not hrefs:
-        raise RuntimeError("No NAIP assets cover the parcel extent.")
+        raise HTTPException(status_code=422, detail = "No NAIP assets cover the parcel extent.")
 
     png_bytes = mask_to_png_bytes(hrefs, parcel_geom, superres_factor=4.0)
 

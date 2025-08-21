@@ -4,6 +4,9 @@ from typing import Optional
 from uuid import UUID
 from datetime import datetime
 
+class PrepImageRequest(BaseModel):
+    address: str
+
 class ParcelStats(BaseModel):
     area_m2: float
     perimeter_m: float

@@ -1,5 +1,6 @@
 # backend/app/utils/mask.py
 
+from fastapi import HTTPException
 import numpy as np
 from shapely.geometry import shape, mapping, Polygon, MultiPolygon
 from shapely.ops import transform as shp_transform
@@ -35,7 +36,7 @@ def mask_naip_with_parcel_mosaic(
     the image is upscaled FIRST and the outline is drawn at the new scale.
     """
     if not naip_hrefs:
-        raise RuntimeError("No NAIP assets for mosaic.")
+        raise HTTPException(status_code= 422, detail= "No NAIP assets for mosaic.")
 
     # 1) Open first to get CRS
     with rasterio.open(naip_hrefs[0]) as src0:

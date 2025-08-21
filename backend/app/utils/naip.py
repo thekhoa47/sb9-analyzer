@@ -1,5 +1,6 @@
 # backend/app/utils/naip.py
 
+from fastapi import HTTPException
 from typing import List, Tuple, Optional
 from dataclasses import dataclass
 from pystac_client import Client
@@ -34,7 +35,7 @@ def _sign_pref_asset(item) -> str:
     # fallback
     for _, asset in item.assets.items():
         return pc.sign(asset.href)
-    raise RuntimeError(f"NAIP item {item.id} has no readable asset.")
+    raise HTTPException(status_code= 422, detail= f"NAIP item {item.id} has no readable asset.")
 
 def find_naip_assets_for_bbox(
     minx: float, miny: float, maxx: float, maxy: float, prefer_years: Optional[List[int]] = None, limit: int = 12
