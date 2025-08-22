@@ -57,6 +57,7 @@ app.add_middleware(
         "http://localhost:3000",
         "http://127.0.0.1:3000",
         "http://0.0.0.0:3000",
+        "https://sb9-analyzer.onrender.com",
     ],
     allow_credentials=True,
     allow_methods=["*"],
