@@ -2,6 +2,7 @@
 import Image from 'next/image';
 import { useState } from 'react';
 import { usePrepImage } from './hooks/usePrepImage';
+import { Button } from './components/button';
 
 export default function Home() {
   const [address, setAddress] = useState<string>('');
@@ -15,8 +16,8 @@ export default function Home() {
 
   return (
     <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center justify-items-center w-[600px]">
-        <div className="font-mono w-full text-sm/6 text-center sm:text-left">
+      <main className="flex flex-col gap-[32px] row-start-2 items-center justify-items-center md:w-[600px] sm:w-full">
+        <div className="font-mono w-full text-sm/6 text-center">
           <label>
             <span className="text-foreground/80">Enter your address:</span>
             <input
@@ -28,7 +29,7 @@ export default function Home() {
               }}
               type="text"
               placeholder="e.g. 123 Main St, Springfield, IL 62701"
-              className={`${isError ? 'border-red-500/80 focus:ring-red-500' : 'border-foreground/80 focus:ring-white'} border w-full p-2 text-lg rounded-sm caret-white focus:outline-none focus:ring-1 `}
+              className={`${isError ? 'border-red-500/80 focus:ring-red-500' : 'border-white focus:ring-white'} border w-full p-2 text-lg rounded-sm caret-white focus:outline-none focus:ring-1 `}
             />
           </label>
         </div>
@@ -37,17 +38,18 @@ export default function Home() {
         {isSuccess && data && (
           <div className="text-sm text-green-600">
             Parcel image ready!
-            <a className='p-2 underline hover:text-green-400' href={data.image_url} target="_blank" rel="noreferrer noopener">
+            <a
+              className="p-2 underline hover:text-green-400"
+              href={data.image_url}
+              target="_blank"
+              rel="noreferrer noopener"
+            >
               Click to see your image!{' '}
             </a>
           </div>
         )}
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <button
-            className="cursor-pointer rounded-sm border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            onClick={() => console.log('Analyze Now clicked')}
-            aria-label="Analyze Now"
-          >
+        <div className="flex gap-4 items-center flex-col sm:flex-row w-full sm:w-auto">
+          <Button disabled type="button" onClick={() => console.log('Analyze Now clicked')}>
             <Image
               className="dark:invert"
               src="/vercel.svg"
@@ -56,16 +58,15 @@ export default function Home() {
               height={20}
             />
             Analyzer Now!
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
-            className="cursor-pointer rounded-sm border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px] disabled:opacity-60"
-            onClick={handleClick}
+            variant="outlined"
             disabled={isPending || !address.trim()}
-            aria-label="Prep Image"
+            onClick={handleClick}
           >
             {isPending ? 'Preparing…' : 'Prepare image'}
-          </button>
+          </Button>
         </div>
       </main>
       <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
