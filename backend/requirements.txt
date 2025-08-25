@@ -10,6 +10,7 @@ click==8.2.1
 click-plugins==1.1.1.2
 cligj==0.7.2
 fastapi==0.116.1
+fastapi-pagination==0.14.0
 filelock==3.19.1
 fsspec==2025.7.0
 GeoAlchemy2==0.18.0

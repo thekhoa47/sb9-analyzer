@@ -1,12 +1,17 @@
 # backend/app/main.py
 
-from fastapi import FastAPI, Depends, HTTPException
+from fastapi import FastAPI, Depends, Request, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 import boto3
 from botocore.client import Config
 from pathlib import Path
 import os
 import requests
+from typing import Optional, Literal, List, Mapping, Tuple
+from sqlalchemy.orm import Session, selectinload
+from sqlalchemy import or_, select
+from fastapi_pagination import Page, Params
+from fastapi_pagination.ext.sqlalchemy import paginate
 
 
 from dotenv import load_dotenv
@@ -20,10 +25,12 @@ from app.utils.geocode import geocode_address
 from app.utils.naip import find_naip_assets_for_bbox
 from app.utils.parcel import get_parcel_geojson_with_props
 from app.services.prepare_property import prepare_property
-from app.schemas import MaskResult, PrepImageRequest, AnalyzeResponse
-from app.models import SB9Result
+from app.schemas import MaskResult, PrepImageRequest, AnalyzeResponse, ResultWithProperty
+from app.models import SB9Result, Property
 from app.db import get_engine  # your engine factory
 from app.ml.sb9_model import SB9Runner
+from app.utils.geo_norm import normalize_state
+from app.utils.parse_filters import parse_filters
 
 
 # ---------- App & Config ----------
@@ -175,7 +182,87 @@ def analyze(
     # 4) return prep-image payload + label
     return AnalyzeResponse(**mask.model_dump(), predicted_label=label)
 
+ALLOWED_SORT = {"address", "city", "state", "zip", "label"}
+
+@app.get("/results", response_model=Page[ResultWithProperty])
+def list_results(
+    request: Request,
+    db: Session = Depends(get_db),
+    params: Params = Depends(),                   # ?page=1&size=50
+    sort_by: List[str] = Query([], alias="sortBy"), # multi-sort: sortBy=city:DESC&sortBy=state:ASC
+    search: Optional[str] = Query(None),           # free text over address/city/state
+):
+    # Base selectable (1:1 join + eager load)
+    stmt = (
+        select(SB9Result)
+        .join(SB9Result.property)
+        .options(selectinload(SB9Result.property))
+    )
+
+    # Filters
+    filters = parse_filters(request.query_params)
+    colmap = {
+        "city":  Property.city,
+        "state": Property.state,
+        "zip":   Property.zip,
+        "label": SB9Result.predicted_label,
+    }
+    for field, op, value in filters:
+        col = colmap[field]
+        if field == "state":
+            value = normalize_state(value) or value  # allow full names
+        if op == "$eq":
+            stmt = stmt.where(col == value)
+        elif op == "$ne":
+            stmt = stmt.where(col != value)
+        elif op == "$ilike":
+            stmt = stmt.where(col.ilike(f"%{value}%"))
+        elif op == "$in":
+            vals = [v.strip() for v in value.split(",") if v.strip()]
+            if vals: stmt = stmt.where(col.in_(vals))
+        elif op == "$nin":
+            vals = [v.strip() for v in value.split(",") if v.strip()]
+            if vals: stmt = stmt.where(~col.in_(vals))
+
+    # Search over address/city/state (+ “California” -> CA)
+    if search:
+        needle = search.strip()
+        like = f"%{needle}%"
+        maybe_abbr = normalize_state(needle)
+        ors = [Property.address.ilike(like), Property.city.ilike(like), Property.state.ilike(like)]
+        if maybe_abbr:
+            ors.append(Property.state == maybe_abbr)
+        stmt = stmt.where(or_(*ors))
+
+    # Multi-sort parsing
+    sort_map = {
+        "address": Property.address,
+        "city":    Property.city,
+        "state":   Property.state,
+        "zip":     Property.zip,
+        "label":   SB9Result.predicted_label,
+    }
+    order_cols = []
+    for item in sort_by:
+        field, _, dirpart = item.partition(":")
+        field = field.strip().lower()
+        if field not in ALLOWED_SORT:
+            raise HTTPException(400, detail=f"Unsupported sort field: {field}")
+        direction = (dirpart or "ASC").strip().upper()
+        col = sort_map[field]
+        order_cols.append(col.desc() if direction == "DESC" else col.asc())
+
+    if order_cols:
+        stmt = stmt.order_by(*order_cols)
+    else:
+        stmt = stmt.order_by(Property.address.asc())  # default
+
+    return paginate(db, stmt, params)
+
+#-----------------------------------
 # ---------- Debug routes ----------
+#-----------------------------------
+
 
 @app.get("/debug/geocode")
 def debug_geocode(
