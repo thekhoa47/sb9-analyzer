@@ -3,15 +3,33 @@ import Image from 'next/image';
 import { useState } from 'react';
 import { usePrepImage } from './hooks/usePrepImage';
 import { Button } from './components/button';
+import { useAnalyze } from './hooks/useAnalyze';
 
 export default function Home() {
   const [address, setAddress] = useState<string>('');
   const { mutate, data, error, isError, isPending, isSuccess, reset } = usePrepImage();
+  const {
+    mutate: mutateAnalyze,
+    data: dataAnalyze,
+    error: errorAnalyze,
+    isError: isErrorAnalyze,
+    isPending: isPendingAnalyze,
+    isSuccess: isSuccessAnalyze,
+    reset: resetAnalyze,
+  } = useAnalyze();
 
-  const handleClick = () => {
+  const handlePrepImageClick = () => {
     if (!address.trim()) return;
     reset(); // clear previous error/success
+    resetAnalyze(); // clear previous error/success
     mutate(address.trim()); // or: await mutateAsync(address.trim())
+  };
+
+  const handleAnalyzeClick = () => {
+    if (!address.trim()) return;
+    reset(); // clear previous error/success
+    resetAnalyze(); // clear previous error/success
+    mutateAnalyze(address.trim()); // or: await mutateAsync(address.trim())
   };
 
   return (
@@ -26,6 +44,7 @@ export default function Home() {
               onChange={(e) => {
                 setAddress(e.target.value);
                 if (isError || isSuccess) reset(); // clear inline state while typing
+                if (isErrorAnalyze || isSuccessAnalyze) resetAnalyze(); // clear inline state while typing
               }}
               type="text"
               placeholder="e.g. 123 Main St, Springfield, IL 62701"
@@ -33,23 +52,40 @@ export default function Home() {
             />
           </label>
         </div>
-        {isPending && <div className="text-foreground/80">Preparing image, please wait...</div>}
-        {isError && <p className="text-sm text-red-600">{(error as Error).message}</p>}
-        {isSuccess && data && (
-          <div className="text-sm text-green-600">
-            Parcel image ready!
-            <a
-              className="p-2 underline hover:text-green-400"
-              href={data.image_url}
-              target="_blank"
-              rel="noreferrer noopener"
-            >
-              Click to see your image!{' '}
-            </a>
+        {(isPending || isPendingAnalyze) && (
+          <div className="text-foreground/80">Preparing image, please wait...</div>
+        )}
+        {(isError || isErrorAnalyze) && (
+          <p className="text-sm text-red-600">
+            {(error as Error)?.message || (errorAnalyze as Error)?.message}
+          </p>
+        )}
+        {((isSuccess && data) || (isSuccessAnalyze && dataAnalyze)) && (
+          <div className="text-sm text-foreground/80 flex flex-col items-center gap-4">
+            {isSuccess ? 'Parcel image ready!' : 'Analysis Complete!'}
+            <Image
+              src={data?.image_url || dataAnalyze?.image_url || ''}
+              alt="Parcel"
+              width={400}
+              height={400}
+            />
+          </div>
+        )}
+        {isSuccessAnalyze && dataAnalyze && (
+          <div className="text-sm font-medium">
+            <p>Good for SB9: {dataAnalyze.predicted_label}</p>
+            <p>
+              Address: {dataAnalyze.address}, {dataAnalyze.city}, {dataAnalyze.state}{' '}
+              {dataAnalyze.zip}
+            </p>
           </div>
         )}
         <div className="flex gap-4 items-center flex-col sm:flex-row w-full sm:w-auto">
-          <Button disabled type="button" onClick={() => console.log('Analyze Now clicked')}>
+          <Button
+            type="button"
+            onClick={handleAnalyzeClick}
+            disabled={isPending || !address.trim()}
+          >
             <Image
               className="dark:invert"
               src="/vercel.svg"
@@ -57,13 +93,13 @@ export default function Home() {
               width={20}
               height={20}
             />
-            Analyzer Now!
+            {isPendingAnalyze ? 'Analyzing…' : 'Analyzer Now!'}
           </Button>
           <Button
             type="button"
             variant="outlined"
             disabled={isPending || !address.trim()}
-            onClick={handleClick}
+            onClick={handlePrepImageClick}
           >
             {isPending ? 'Preparing…' : 'Prepare image'}
           </Button>

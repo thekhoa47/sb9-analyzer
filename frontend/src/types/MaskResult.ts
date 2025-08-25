@@ -12,3 +12,7 @@ export type MaskResult = {
   image_url: string;
   parcel_stats: string;
 };
+
+export type AnalyzeResult = MaskResult & {
+  predicted_label: 'YES' | 'NO';
+};
