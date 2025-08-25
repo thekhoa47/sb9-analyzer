@@ -26,3 +26,18 @@ class MaskResult(BaseModel):
     image_url: str
     # Optional helper for UI
     parcel_stats: Optional[ParcelStats] = None
+
+class PredictReq(BaseModel):
+    url: str  # public image URL you already store in R2 (or anywhere)
+
+class PredictResp(BaseModel):
+    label: str
+    confidence: float
+    probs: dict
+
+class ReloadReq(BaseModel):
+    bucket: Optional[str] = None
+    key: Optional[str] = None
+
+class AnalyzeResponse(MaskResult):
+    predicted_label: str  # "YES" / "NO"

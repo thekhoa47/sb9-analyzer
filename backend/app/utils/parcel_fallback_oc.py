@@ -25,9 +25,3 @@ def get_oc_parcel_by_point_full(lat: float, lon: float):
         raise HTTPException(status_code = 422, detail = "OC GIS: no parcel near this point.")
     f = feats[0]
     return f["geometry"], f.get("properties", {})
-    # addresses = []
-    # for f in feats:
-    #     props = f.get("properties", {})
-    #     site_address = f["geometry"], props.get("SITE_ADDRESS") or props.get("SITUSADDR") or ""
-    #     addresses.append(site_address)
-    # return addresses

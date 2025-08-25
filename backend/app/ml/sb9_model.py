@@ -11,6 +11,7 @@ import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader, WeightedRandomSampler
 from torchvision import models, transforms, datasets
+from torchvision.transforms import functional as TF
 from PIL import Image
 
 
@@ -57,29 +58,76 @@ class SB9Artifact:
         )
 
 
-def create_model(num_classes: int, pretrained: bool = True) -> nn.Module:
-    m = models.mobilenet_v3_small(weights=models.MobileNet_V3_Small_Weights.DEFAULT if pretrained else None)
+def create_model(num_classes: int, pretrained: bool = True, freeze_backbone: bool = True) -> nn.Module:
+    """
+    Create MobileNetV3 Small and (by default) freeze the feature extractor so
+    only the classifier head is trained — ideal for very small datasets.
+    """
+    m = models.mobilenet_v3_small(
+        weights=models.MobileNet_V3_Small_Weights.DEFAULT if pretrained else None
+    )
+
+    # Freeze backbone (feature extractor)
+    if freeze_backbone:
+        for p in m.features.parameters():
+            p.requires_grad = False
+
+    # Replace final classifier layer for our number of classes
     in_feats = m.classifier[-1].in_features
     m.classifier[-1] = nn.Linear(in_feats, num_classes)
     return m
 
+class ResizeLongestSideAndPad:
+    """
+    Resize image so the longest side = size, keep aspect ratio,
+    then pad to (size, size) without cropping.
+    """
+    def __init__(self, size: int):
+        self.size = size
+
+    def __call__(self, img: Image.Image) -> Image.Image:
+        w, h = img.size
+        scale = self.size / max(w, h)
+        new_w, new_h = int(round(w * scale)), int(round(h * scale))
+        img = TF.resize(img, (new_h, new_w), antialias=True)
+
+        pad_w = self.size - new_w
+        pad_h = self.size - new_h
+        left   = pad_w // 2
+        right  = pad_w - left
+        top    = pad_h // 2
+        bottom = pad_h - top
+
+        # pad with 0 (black); fine since we normalize afterward
+        img = TF.pad(img, (left, top, right, bottom), fill=0)
+        return img
+
 
 def default_transforms(train: bool) -> transforms.Compose:
+    letterbox = ResizeLongestSideAndPad(INPUT_SIZE)
+
     if train:
         return transforms.Compose([
-            transforms.RandomResizedCrop(INPUT_SIZE, scale=(0.8, 1.0)),
-            transforms.RandomHorizontalFlip(),
-            transforms.ColorJitter(0.1, 0.1, 0.1, 0.05),
+            letterbox,
+            transforms.RandomHorizontalFlip(p=0.5),
+            transforms.RandomRotation(15),          # stays within 224 canvas (no expand)
+            transforms.ColorJitter(0.2, 0.2, 0.2, 0.05),
             transforms.ToTensor(),
             transforms.Normalize(IMAGENET_MEAN, IMAGENET_STD),
         ])
     else:
         return transforms.Compose([
-            transforms.Resize(256),
-            transforms.CenterCrop(INPUT_SIZE),
+            letterbox,
             transforms.ToTensor(),
             transforms.Normalize(IMAGENET_MEAN, IMAGENET_STD),
         ])
+
+
+def _pin_memory_default() -> bool:
+    """
+    Use pin_memory on CUDA only. On macOS MPS it's unsupported and noisy.
+    """
+    return torch.cuda.is_available()
 
 
 def make_loaders_from_folder(
@@ -92,9 +140,9 @@ def make_loaders_from_folder(
     """
     Expects folder structure:
       data_dir/
-        ELIGIBLE/
+        NO/
           *.png|jpg
-        INELIGIBLE/
+        YES/
           *.png|jpg
     """
     full_ds = datasets.ImageFolder(data_dir, transform=None)  # defer transforms
@@ -116,7 +164,7 @@ def make_loaders_from_folder(
         val_idx
     )
 
-    # class weights (handle imbalance with ~200 images)
+    # class weights (handle imbalance)
     import numpy as np
     train_targets = np.array([full_ds.targets[i] for i in train_idx])
     class_sample_count = np.bincount(train_targets, minlength=len(class_to_idx))
@@ -124,8 +172,9 @@ def make_loaders_from_folder(
     samples_weight = weights[train_targets]
     sampler = WeightedRandomSampler(torch.from_numpy(samples_weight).double(), num_samples=len(samples_weight), replacement=True)
 
-    train_loader = DataLoader(train_ds, batch_size=batch_size, sampler=sampler, num_workers=num_workers, pin_memory=True)
-    val_loader = DataLoader(val_ds, batch_size=batch_size, shuffle=False, num_workers=num_workers, pin_memory=True)
+    pin = _pin_memory_default()
+    train_loader = DataLoader(train_ds, batch_size=batch_size, sampler=sampler, num_workers=num_workers, pin_memory=pin)
+    val_loader   = DataLoader(val_ds,   batch_size=batch_size, shuffle=False, num_workers=num_workers, pin_memory=pin)
     return train_loader, val_loader, class_to_idx
 
 
@@ -168,19 +217,22 @@ def fit(
     data_dir: str,
     out_path: str,
     epochs: int = 12,
-    lr: float = 3e-4,
+    lr: float = 1e-3,          # slightly higher LR OK for head-only training
     wd: float = 1e-4,
     batch_size: int = 16,
     patience: int = 4,
     device: Optional[str] = None,
+    freeze_backbone: bool = True,  # NEW: default to freezing backbone
 ) -> SB9Artifact:
     train_loader, val_loader, class_to_idx = make_loaders_from_folder(data_dir, batch_size=batch_size)
     device = device or ("mps" if torch.backends.mps.is_available() else ("cuda" if torch.cuda.is_available() else "cpu"))
 
-    model = create_model(num_classes=len(class_to_idx), pretrained=True).to(device)
-    # unfreeze everything (mobilenet is small). For even smaller dataset, you can freeze backbone first.
-    optimizer = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=wd)
-    criterion = nn.CrossEntropyLoss()
+    # Create model with frozen backbone by default
+    model = create_model(num_classes=len(class_to_idx), pretrained=True, freeze_backbone=freeze_backbone).to(device)
+
+    # Only optimize parameters that require grad (i.e., classifier head if backbone frozen)
+    optimizer = torch.optim.AdamW((p for p in model.parameters() if p.requires_grad), lr=lr, weight_decay=wd)
+    criterion = nn.CrossEntropyLoss(label_smoothing=0.05)
 
     best_acc, best_state = 0.0, None
     bad_epochs = 0
@@ -224,7 +276,8 @@ class SB9Runner:
         self.artifact_path = artifact_path
         self.device = device or ("mps" if torch.backends.mps.is_available() else ("cuda" if torch.cuda.is_available() else "cpu"))
         self.art = SB9Artifact.from_file(artifact_path, map_location=self.device)
-        self.model = create_model(num_classes=len(self.art.class_to_idx), pretrained=False).to(self.device)
+        # pretrained=False at inference; weights come from artifact
+        self.model = create_model(num_classes=len(self.art.class_to_idx), pretrained=False, freeze_backbone=False).to(self.device)
         self.model.load_state_dict(self.art.state_dict)
         self.model.eval()
         self.idx_to_class = {v: k for k, v in self.art.class_to_idx.items()}
