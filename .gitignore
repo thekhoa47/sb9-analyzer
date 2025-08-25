@@ -1,12 +1,94 @@
-# Python (backend)
-backend/.venv/
-backend/__pycache__/
-backend/*.pyc
-backend/.env
-
-# Node (frontend)
-frontend/node_modules/
-frontend/.env
-
-# General
+# =========================================
+# OS / Editor junk
+# =========================================
 .DS_Store
+Thumbs.db
+*.log
+*.swp
+*.swo
+*.tmp
+.vscode/
+.idea/
+*.sublime-workspace
+*.sublime-project
+
+# =========================================
+# Environment files (ignore everywhere)
+# =========================================
+.env
+**/.env
+.env.local
+**/.env.local
+.env.*.local
+**/.env.*.local
+
+# =========================================
+# Python / FastAPI (backend)
+# =========================================
+backend/__pycache__/
+backend/*.py[cod]
+backend/*$py.class
+
+backend/.Python
+backend/env/
+backend/venv/
+backend/.venv/
+backend/ENV/
+backend/pip-log.txt
+backend/pip-delete-this-directory.txt
+backend/dist/
+backend/build/
+backend/*.egg-info/
+backend/.eggs/
+
+backend/htmlcov/
+backend/.tox/
+backend/.nox/
+backend/.coverage
+backend/.coverage.*
+backend/.cache
+backend/.pytest_cache/
+backend/.pybuilder/
+backend/.pyre/
+
+backend/.ipynb_checkpoints
+
+# SQLite / local DBs
+backend/*.sqlite3
+backend/*.db
+
+# ML / data (if not committing)
+*.pt
+backend/data/
+backend/*.pth
+backend/*.h5
+backend/*.pickle
+
+# =========================================
+# Node.js / Next.js (frontend)
+# =========================================
+frontend/node_modules/
+frontend/npm-debug.log*
+frontend/yarn-debug.log*
+frontend/yarn-error.log*
+frontend/pnpm-debug.log*
+
+# Next.js build outputs
+frontend/.next/
+frontend/out/
+frontend/.vercel/
+
+# Coverage
+frontend/coverage/
+frontend/.nyc_output/
+
+# =========================================
+# Other / general
+# =========================================
+# MacOS
+.AppleDouble
+.LSOverride
+
+# Backup files
+*.bak
+*.orig
