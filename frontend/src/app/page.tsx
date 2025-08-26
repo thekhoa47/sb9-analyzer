@@ -1,9 +1,11 @@
 'use client';
 import Image from 'next/image';
 import { useState } from 'react';
-import { usePrepImage } from './hooks/usePrepImage';
-import { Button } from './components/button';
-import { useAnalyze } from './hooks/useAnalyze';
+import { usePrepImage } from '../hooks/usePrepImage';
+import { Button } from '../components/button';
+import { useAnalyze } from '../hooks/useAnalyze';
+import Link from 'next/link';
+import { FaBlog, FaList } from 'react-icons/fa6';
 
 export default function Home() {
   const [address, setAddress] = useState<string>('');
@@ -34,6 +36,7 @@ export default function Home() {
 
   return (
     <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
+      <h1 className="font-semibold text-2xl ">SB9 Analyzer</h1>
       <main className="flex flex-col gap-[32px] row-start-2 items-center justify-items-center md:w-[600px] sm:w-full">
         <div className="font-mono w-full text-sm/6 text-center">
           <label>
@@ -112,9 +115,16 @@ export default function Home() {
           target="_blank"
           rel="noopener noreferrer"
         >
-          <Image aria-hidden src="/globe.svg" alt="Globe icon" width={16} height={16} />
+          <FaBlog />
           Go to my blog →
         </a>
+        <Link
+          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
+          href="/results"
+        >
+          <FaList />
+          View past analyses →
+        </Link>
       </footer>
     </div>
   );

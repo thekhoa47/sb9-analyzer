@@ -1,0 +1,1 @@
+export type URLSearchParamsInit = ConstructorParameters<typeof URLSearchParams>[0];
