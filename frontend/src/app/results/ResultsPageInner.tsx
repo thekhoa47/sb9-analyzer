@@ -34,7 +34,7 @@ export default function ResultsPageInner() {
           ...query,
           searchTerm: debouncedSearchTerm, // (if your API expects "search", use that key instead)
         })
-          .filter(([_, v]) => v !== '' && v != null)
+          .filter(([, v]) => v !== '' && v != null)
           .map(([k, v]) => [k, v.toString()])
       ),
     [query, debouncedSearchTerm]
