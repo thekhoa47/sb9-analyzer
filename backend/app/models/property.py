@@ -7,13 +7,12 @@ from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from geoalchemy2 import Geometry
 
-from .base import Base
+from .base_model import BaseModel
 
 
-class Property(Base):
+class Property(BaseModel):
     __tablename__ = "properties"
 
-    id             = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     address        = Column(Text, nullable=False)
     city           = Column(Text)
     state          = Column(CHAR(2), CheckConstraint("state ~ '^[A-Z]{2}$'"))
@@ -29,9 +28,6 @@ class Property(Base):
     lot_area    = Column(Integer, CheckConstraint("lot_area >= 0"))
 
     image_url   = Column(Text)
-
-    created_at  = Column(TIMESTAMP(timezone=True), nullable=False, server_default=text("now()"))
-    updated_at  = Column(TIMESTAMP(timezone=True))
 
     # one-to-one relationship with SB9Result
     result = relationship(

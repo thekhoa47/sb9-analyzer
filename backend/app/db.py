@@ -1,14 +1,34 @@
-# backend/app/db.py
-import os
+# app/db.py
 from sqlalchemy import create_engine
-from dotenv import load_dotenv
+from sqlalchemy.orm import sessionmaker, DeclarativeBase
+from app.config import settings
 
-load_dotenv()
+# Declarative base for all models
+class Base(DeclarativeBase):
+    pass
 
-DATABASE_URL = os.getenv("DATABASE_URL")
+# Engine (reuse one engine per process)
+engine = create_engine(
+    settings.DATABASE_URL,
+    pool_pre_ping=True,
+    future=True,
+)
 
-if not DATABASE_URL:
-    raise RuntimeError("DATABASE_URL not set in environment")
+# Session factory (thread-safe factory; sessions are not thread-safe)
+SessionLocal = sessionmaker(
+    bind=engine,
+    autocommit=False,
+    autoflush=False,
+    expire_on_commit=False,
+)
+
+def get_db():
+    """FastAPI dependency to yield a scoped session."""
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
 
 def get_engine():
-    return create_engine(DATABASE_URL, future=True)
+    return engine

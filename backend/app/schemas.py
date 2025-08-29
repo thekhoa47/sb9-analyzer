@@ -76,3 +76,30 @@ class ResultsPage(BaseModel):
     limit: int
     offset: int
     data: list[ResultWithProperty]
+
+from pydantic import BaseModel
+
+class ClientIn(BaseModel):
+    name: str
+    email: str | None = None
+    phone: str | None = None
+    messenger_psid: str | None = None
+    sms_opt_in: bool = True
+    email_opt_in: bool = True
+    messenger_opt_in: bool = False
+
+class ClientOut(ClientIn):
+    id: int
+
+class SavedSearchIn(BaseModel):
+    name: str
+    city: str
+    radius_miles: int = 10
+    beds_min: int = 3
+    baths_min: int = 2
+    max_price: int | None = None
+    client_id: int
+
+class SavedSearchOut(SavedSearchIn):
+    id: int
+    cursor_iso: str | None = None
