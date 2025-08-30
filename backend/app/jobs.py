@@ -14,13 +14,19 @@ from app.models import SavedSearch, ListingSeen, Notification, Client
 from app.services.reso import poll_reso
 from app.services.analyze_listing import analyze_listing
 from app.services.notify import send_sms, send_messenger
+from app.jobs_lock import poll_lock
 
 log = logging.getLogger("sb9.jobs")
 
 # Use AsyncIOScheduler under uvicorn/asyncio
+# Increase misfire_grace_time so laptop sleep / reloads don't skip runs
 sched = AsyncIOScheduler(
     timezone="UTC",
-    job_defaults={"coalesce": True, "max_instances": 1, "misfire_grace_time": 30},
+    job_defaults={
+        "coalesce": True,
+        "max_instances": 1,
+        "misfire_grace_time": 300,  # <-- was 30
+    },
 )
 
 # simple in-memory status
@@ -116,40 +122,114 @@ def _run_saved_search(search: SavedSearch, db: Session) -> int:
     db.commit()
 
     return new_count
+    
+
+from app.services.zillow_redfin import fetch_listings_via_gpt
+
+def _run_saved_search_gpt(search: SavedSearch, db: Session) -> int:
+    """
+    Same logic as _run_saved_search, but fetches listings from GPT instead of RESO.
+    """
+    listings = fetch_listings_via_gpt(search)
+    new_count = 0
+    client: Optional[Client] = db.get(Client, search.client_id) if getattr(search, "client_id", None) else None
+
+    for L in listings:
+        key = str(L.get("ListingKey") or L.get("UnparsedAddress") or "")
+        if not key:
+            continue
+
+        # dedupe
+        exists = (
+            db.query(ListingSeen)
+            .filter_by(listing_key=key, saved_search_id=search.id)
+            .first()
+        )
+        if exists:
+            continue
+
+        # analyze
+        analysis = analyze_listing(L)
+        msg = (
+            f"New: {L.get('UnparsedAddress')} • ${int(L.get('ListPrice') or 0):,} "
+            f"• Score {analysis['score']}\n{analysis['summary']}"
+        )
+
+        # notify
+        if client:
+            if client.phone and client.sms_opt_in:
+                sid = send_sms(client.phone, msg)
+                db.add(Notification(
+                    channel="sms",
+                    listing_key=key,
+                    status="sent",
+                    detail=str(sid),
+                    client_id=client.id,
+                    saved_search_id=search.id,
+                ))
+            if client.messenger_psid and client.messenger_opt_in:
+                st = send_messenger(client.messenger_psid, msg)
+                db.add(Notification(
+                    channel="messenger",
+                    listing_key=key,
+                    status=st if isinstance(st, str) else "sent",
+                    detail="" if isinstance(st, str) else str(st),
+                    client_id=client.id,
+                    saved_search_id=search.id,
+                ))
+
+        # mark seen
+        db.add(ListingSeen(listing_key=key, saved_search_id=search.id))
+        db.commit()
+        new_count += 1
+
+    # update cursor (optional — doesn’t apply well to GPT since it’s not time-sliced)
+    search.cursor_iso = datetime.now(timezone.utc).isoformat()
+    db.commit()
+
+    return new_count
 
 
 def _poll_job():
     """Main scheduled job."""
-    _last["at"] = datetime.now(timezone.utc).isoformat()
-    _last["error"] = None
-    _last["new"] = 0
+    with poll_lock() as ok:
+        if not ok:
+            log.info("poll skipped: another run is in progress")
+            return
 
-    log.info("=== poll_job START ===")
+        _last["at"] = datetime.now(timezone.utc).isoformat()
+        _last["error"] = None
+        _last["new"] = 0
 
-    db = SessionLocal()
-    try:
-        searches = db.query(SavedSearch).all()
-        _last["searched"] = len(searches)
-        log.info("found %d saved searches", len(searches))
+        log.info("=== poll_job START ===")
 
-        for s in searches:
-            count = _run_saved_search(s, db)
-            _last["new"] += count
-            log.info("search %s → %d new", s.id, count)
+        db = SessionLocal()
+        try:
+            searches = db.query(SavedSearch).all()
+            _last["searched"] = len(searches)
+            log.info("found %d saved searches", len(searches))
 
-        log.info("=== poll_job END: %d new ===", _last["new"])
+            for s in searches:
+                if settings.USE_GPT_FETCH:
+                    count = _run_saved_search_gpt(s, db)
+                else:
+                    count = _run_saved_search(s, db)
+                _last["new"] += count
+                log.info("search %s → %d new", s.id, count)
 
-    except Exception as e:
-        _last["error"] = f"{type(e).__name__}: {e}"
-        log.exception("poll_job failed")
-    finally:
-        db.close()
+            log.info("=== poll_job END: %d new ===", _last["new"])
+
+        except Exception as e:
+            _last["error"] = f"{type(e).__name__}: {e}"
+            log.exception("poll_job failed")
+        finally:
+            db.close()
 
 
 def start_scheduler():
     """
     Add the interval job and start the scheduler.
-    Also schedules the first run 1s in the future so it fires immediately after start().
+    Also schedules the first run ~1s in the future so it fires asap after start().
     """
     # add job once
     if not any(j.id == "poll_reso" for j in sched.get_jobs()):
@@ -161,6 +241,8 @@ def start_scheduler():
             next_run_time=first,            # fire soon after start()
             id="poll_reso",
             replace_existing=True,
+            coalesce=True,
+            misfire_grace_time=300,         # <-- per-job grace (matches scheduler defaults)
         )
         log.info("Scheduled job %s next_run_time=%s", job.id, job.next_run_time)
 

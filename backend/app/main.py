@@ -34,7 +34,7 @@ from .models import Client, SavedSearch
 from .schemas import ClientIn, ClientOut, SavedSearchIn, SavedSearchOut
 from .jobs import start_scheduler, shutdown_scheduler, trigger_poll_once
 from .config import settings
-from app.routers import messenger_webhook
+from app.routers import messenger_webhook, tasks
 
 
 # --- logging ---
@@ -88,9 +88,8 @@ async def lifespan(app: FastAPI):
         model_path = _ensure_local_model()
         MODEL_RUNNER = SB9Runner(str(model_path))
         log.info("[SB9] Model loaded ✅")
-        
-        start_scheduler()
-        trigger_poll_once()
+        if settings.ENABLE_SCHEDULER:
+            start_scheduler()
         yield
     except Exception as e:
         MODEL_RUNNER = None
@@ -131,6 +130,7 @@ def health():
 
 # ---------- Routers ----------
 app.include_router(messenger_webhook.router)
+app.include_router(tasks.router)
 
 # ---------- Main endpoint ----------
 

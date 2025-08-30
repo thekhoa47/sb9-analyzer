@@ -38,8 +38,10 @@ class Settings(BaseModel):
     VERIFY_TOKEN: str = os.getenv("VERIFY_TOKEN")
     TEST_PSID: str | None = os.getenv("TEST_PSID")
 
+    ENABLE_SCHEDULER: bool = False
+    USE_GPT_FETCH: bool = True
+    TASK_KEY: str | None = None  # used by /tasks/poll auth
     POLL_INTERVAL_MINUTES: int = int(os.getenv("POLL_INTERVAL_MINUTES"))
-
     DEFAULT_CITY: str = os.getenv("DEFAULT_CITY")
     DEFAULT_RADIUS_MILES: int = int(os.getenv("DEFAULT_RADIUS_MILES"))
     DEFAULT_BEDS_MIN: int = int(os.getenv("DEFAULT_BEDS_MIN"))
