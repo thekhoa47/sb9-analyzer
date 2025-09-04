@@ -1,6 +1,6 @@
 # app/schemas.py
-from pydantic import BaseModel, ConfigDict
-from typing import Optional
+from pydantic import BaseModel, ConfigDict, Field
+from typing import Optional, List
 from uuid import UUID
 from datetime import datetime
 
@@ -84,22 +84,36 @@ class ClientIn(BaseModel):
     email: str | None = None
     phone: str | None = None
     messenger_psid: str | None = None
-    sms_opt_in: bool = True
-    email_opt_in: bool = True
+    sms_opt_in: bool = False
+    email_opt_in: bool = False
     messenger_opt_in: bool = False
 
 class ClientOut(ClientIn):
-    id: int
+    id: UUID
+    model_config = ConfigDict(from_attributes=True)
+
 
 class SavedSearchIn(BaseModel):
     name: str
     city: str
-    radius_miles: int = 10
-    beds_min: int = 3
-    baths_min: int = 2
+    radius_miles: int = 50
+    beds_min: int = 0
+    baths_min: int = 0
     max_price: int | None = None
-    client_id: int
 
 class SavedSearchOut(SavedSearchIn):
-    id: int
+    id: UUID
+    client_id: UUID
     cursor_iso: str | None = None
+
+class ClientsWithSearchesOut(ClientOut):
+    model_config = ConfigDict(from_attributes=True, populate_by_name=True)
+    # Pull from the ORM attribute `searches`, output as `listing_preferences`
+    listing_preferences: List[SavedSearchOut] = Field(default_factory=list, alias="searches")
+    
+class OnboardNewClientIn(ClientIn):
+    listing_preferences: List[SavedSearchIn]
+
+class OnboardNewClientOut(BaseModel):
+    client: ClientOut
+    saved_searches: List[SavedSearchOut]

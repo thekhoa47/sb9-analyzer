@@ -31,7 +31,7 @@ from .ml.sb9_model import SB9Runner
 from .utils.geo_norm import normalize_state
 from .utils.parse_filters import parse_filters
 from .models import Client, SavedSearch
-from .schemas import ClientIn, ClientOut, SavedSearchIn, SavedSearchOut
+from .schemas import ClientIn, ClientOut, SavedSearchIn, SavedSearchOut, OnboardNewClientIn, OnboardNewClientOut, ClientsWithSearchesOut
 from .jobs import start_scheduler, shutdown_scheduler, trigger_poll_once
 from .config import settings
 from app.routers import messenger_webhook, tasks
@@ -272,6 +272,40 @@ def get_client(client_id: int, db: Session = Depends(get_db)):
         sms_opt_in=c.sms_opt_in, email_opt_in=c.email_opt_in, messenger_opt_in=c.messenger_opt_in
     )
 
+@app.get("/clients", response_model=Page[ClientsWithSearchesOut])
+def list_clients(
+    request: Request,
+    db: Session = Depends(get_db),
+    params: Params = Depends(),                   # ?page=1&size=50
+    search: Optional[str] = Query(None),           # free text over name/email/phone/messenger_psid
+):
+    # Base selectable (1:1 join + eager load)
+    stmt = (
+        select(Client)
+        .join(Client.searches)
+        .options(selectinload(Client.searches))
+    )
+
+    # Filters
+    filters = parse_filters(request.query_params)
+    colmap = {
+        "sms_opt_in":  Client.sms_opt_in,
+        "email_opt_in": Client.email_opt_in,
+        "messenger_opt_in":   Client.messenger_opt_in,
+    }
+    for field, value in filters:
+        col = colmap[field]
+        stmt = stmt.where(col == value)
+
+    # Search over address/city/state (+ “California” -> CA)
+    if search:
+        needle = search.strip()
+        like = f"%{needle}%"
+        ors = [Client.name.ilike(like), Client.email.ilike(like), Client.phone.ilike(like), Client.messenger_psid.ilike(like)]
+        stmt = stmt.where(or_(*ors))
+
+    return paginate(db, stmt, params)
+
 # --- Saved Searches ---
 @app.post("/saved-searches", response_model=SavedSearchOut)
 def create_saved_search(payload: SavedSearchIn, db: Session = Depends(get_db)):
@@ -289,6 +323,75 @@ def get_saved_search(search_id: int, db: Session = Depends(get_db)):
         client_id=s.client_id, cursor_iso=s.cursor_iso
     )
 
+# --- Onboard new clients ---
+@app.post("/onboard-new-client", response_model=OnboardNewClientOut, status_code=201)
+def onboard_new_client(payload: OnboardNewClientIn, db: Session = Depends(get_db)):
+    try:
+        # Start a single transaction
+        with db.begin():
+            # 1) create client
+            client = Client(
+                name=payload.name,
+                email=payload.email,
+                phone=payload.phone,
+                messenger_psid=payload.messenger_psid,
+                email_opt_in=bool(payload.email_opt_in),
+                sms_opt_in=bool(payload.sms_opt_in),
+                messenger_opt_in=bool(payload.messenger_opt_in),
+            )
+            db.add(client)
+            db.flush()  # assign client.id
+
+            # 2) create saved searches
+            saved_searches = []
+            for item in payload.listing_preferences:
+                s = SavedSearch(
+                    client_id=client.id,
+                    name=item.name,
+                    city=item.city,
+                    radius_miles=item.radius_miles,
+                    beds_min=item.beds_min,
+                    baths_min=item.baths_min,
+                    max_price=item.max_price,
+                    # criteria_json=item.criteria_json,
+                )
+                db.add(s)
+                db.flush()  # get s.id, s.cursor_iso
+                # Build output (you can also use Pydantic model_validate if on Pydantic v2)
+                saved_searches.append(SavedSearchOut(
+                    id=str(s.id),
+                    client_id=str(s.client_id),
+                    name=s.name,
+                    city=s.city,
+                    radius_miles=s.radius_miles,
+                    beds_min=s.beds_min,
+                    baths_min=s.baths_min,
+                    max_price=s.max_price,
+                    cursor_iso=s.cursor_iso,
+                    created_at=s.created_at.isoformat(),
+                    updated_at=s.updated_at.isoformat() if s.updated_at else None
+                ))
+
+        # 3) Return combined response (commit happened on exiting the context)
+        client_out = ClientOut(
+            id=str(client.id),
+            name=client.name,
+            email=client.email,
+            phone=client.phone,
+            messenger_psid=client.messenger_psid,
+            email_opt_in=client.email_opt_in,
+            sms_opt_in=client.sms_opt_in,
+            messenger_opt_in=client.messenger_opt_in,
+            created_at=client.created_at.isoformat(),
+            updated_at=client.updated_at.isoformat() if client.updated_at else None
+        )
+
+        return OnboardNewClientOut(client=client_out, saved_searches=saved_searches)
+
+    except Exception as e:
+        # Optionally map DB errors to 4xx
+        db.rollback()
+        raise HTTPException(status_code=400, detail=str(e))
 
 #-----------------------------------
 # ---------- Debug routes ----------

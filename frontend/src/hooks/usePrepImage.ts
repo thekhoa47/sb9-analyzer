@@ -1,6 +1,6 @@
 // hooks/usePrepImage.ts
 import { useMutation } from '@tanstack/react-query';
-import { createPrepImageByAddress } from './../endpoints/createPrepImageByAddress';
+import { createPrepImageByAddress } from '../endpoints/postNewPrepImageByAddress';
 import { MaskResult } from '@/types/MaskResult';
 
 export function usePrepImage() {

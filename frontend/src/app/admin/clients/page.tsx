@@ -1,15 +1,12 @@
 'use client';
-
 import { Suspense } from 'react';
-import ResultsPageInner from './ResultsPageInner';
 import PageShell from '@/components/layout';
+import ClientsPageInner from './ClientsPageInner';
 
-export default function ResultsPage() {
+export default function Clients() {
   return (
     <Suspense fallback={<div className="p-8">Loading…</div>}>
-      <PageShell title="Results">
-        <ResultsPageInner />
-      </PageShell>
+        <ClientsPageInner />
     </Suspense>
   );
 }
