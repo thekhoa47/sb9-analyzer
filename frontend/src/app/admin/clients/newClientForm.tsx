@@ -1,3 +1,4 @@
+import { z } from 'zod';
 import { Checkbox } from '@/components/checkbox';
 import { useFieldArray, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -8,6 +9,10 @@ type ContactFormProps = {
   onCancel: () => void;
 };
 
+type Schema = typeof formSchema;
+type FormInput = z.input<Schema>; // before preprocess/coerce
+type FormOutput = z.infer<Schema>; // after resolver
+
 export function NewClientForm({ onSubmit, onCancel }: ContactFormProps) {
   const {
     control,
@@ -16,7 +21,7 @@ export function NewClientForm({ onSubmit, onCancel }: ContactFormProps) {
     watch,
     reset,
     formState: { errors },
-  } = useForm<FormValues>({
+  } = useForm<FormInput, undefined, FormOutput>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: '',
@@ -40,22 +45,25 @@ export function NewClientForm({ onSubmit, onCancel }: ContactFormProps) {
     mode: 'onChange',
   });
 
-  const { fields, append, remove } = useFieldArray<FormValues>({
+  const { fields, append, remove } = useFieldArray<FormInput>({
     control,
     name: 'listing_preferences',
   });
 
   const emailVal = watch('email');
   const phoneVal = watch('phone');
+  const messengerVal = watch('messenger_psid');
 
   // enable only if strict validators pass
   const emailEnabled = emailRequiredValid.safeParse(emailVal ?? '').success;
   const phoneEnabled = phoneRequiredValid.safeParse(phoneVal ?? '').success;
+  const messengerNonEmpty = z
+    .string()
+    .trim()
+    .min(1)
+    .safeParse(messengerVal ?? '').success;
 
-  const messenger = watch('messenger_psid') ?? '';
-  const messengerNonEmpty = messenger.trim().length > 0; // <- simple check only
-
-  const submitHandler = (data: FormValues) => {
+  const submitHandler = (data: FormOutput) => {
     onSubmit(data);
     reset();
   };

@@ -1,14 +1,14 @@
 export type NewClient = {
   id: string;
   name: string;
-  email: string;
-  phone?: string;
-  messenger_psid?: string;
+  email: string | null;
+  phone: string | null;
+  messenger_psid: string | null;
   email_opt_in: boolean;
   sms_opt_in: boolean;
   messenger_opt_in: boolean;
   created_at: string;
-  updated_at: string;
+  updated_at: string | null;
   listing_preferences: {
     id: string;
     client_id: string;
@@ -17,9 +17,9 @@ export type NewClient = {
     radius_miles: number;
     beds_min: number;
     baths_min: number;
-    max_price: number;
-    criteria_json: string;
-    cursor_iso?: string | null;
+    max_price: number | null;
+    criteria_json: string | null;
+    cursor_iso: string | null;
     created_at: string;
     updated_at: string | null;
   }[];
