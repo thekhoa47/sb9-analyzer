@@ -1,5 +1,6 @@
 # app/services/zillow_redfin.py
 import logging
+import json
 from openai import OpenAI
 from app.config import settings
 
@@ -57,7 +58,8 @@ def fetch_listings_via_gpt(saved_search) -> list[dict]:
     )
 
     try:
-        parsed = response.choices[0].message.parsed
+        raw = response.choices[0].message.content
+        parsed = json.loads(raw)
         return parsed.get("listings", [])
     except Exception as e:
         log.exception("GPT fetch parse error: %s", e)

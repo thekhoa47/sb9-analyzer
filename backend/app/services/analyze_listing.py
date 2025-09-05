@@ -85,7 +85,8 @@ def analyze_listing(listing: dict) -> dict:
             temperature=0,
         )
 
-        parsed = resp.choices[0].message.parsed
+        raw = resp.choices[0].message.content
+        parsed = json.loads(raw)
         return parsed
 
     except Exception as e:
