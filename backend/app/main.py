@@ -114,8 +114,10 @@ app.add_middleware(
         "http://127.0.0.1:3000",
         "http://0.0.0.0:3000",
         "https://anhdao.vercel.app",
-        "https://wwww.hannahanhdao.com",
+        "https://www.hannahanhdao.com",
         "https://hannahanhdao.com",
+        
+
     ],
     # Allow Vercel preview deployments too:
     allow_origin_regex=r"^https://anhdao-.*\.vercel\.app$",
