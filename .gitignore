@@ -11,6 +11,7 @@ Thumbs.db
 .idea/
 *.sublime-workspace
 *.sublime-project
+todo.txt
 
 # =========================================
 # Environment files (ignore everywhere)

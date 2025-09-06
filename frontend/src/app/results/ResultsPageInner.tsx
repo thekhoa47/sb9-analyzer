@@ -1,6 +1,4 @@
 'use client';
-
-import { Footer } from '@/components/footer';
 import { useDebounce } from '@/hooks/useDebounce';
 import { useResult } from '@/hooks/useResults';
 import { useUrlStateGroup } from '@/hooks/useUrlState';
