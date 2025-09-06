@@ -3,9 +3,11 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, DeclarativeBase
 from app.config import settings
 
+
 # Declarative base for all models
 class Base(DeclarativeBase):
     pass
+
 
 # Engine (reuse one engine per process)
 engine = create_engine(
@@ -22,6 +24,7 @@ SessionLocal = sessionmaker(
     expire_on_commit=False,
 )
 
+
 def get_db():
     """FastAPI dependency to yield a scoped session."""
     db = SessionLocal()
@@ -29,6 +32,7 @@ def get_db():
         yield db
     finally:
         db.close()
+
 
 def get_engine():
     return engine

@@ -6,4 +6,12 @@ from .saved_search import SavedSearch
 from .listing_seen import ListingSeen
 from .notification import Notification
 
-__all__ = ["Base", "Property", "SB9Result", "Client", "SavedSearch", "ListingSeen", "Notification"]
+__all__ = [
+    "Base",
+    "Property",
+    "SB9Result",
+    "Client",
+    "SavedSearch",
+    "ListingSeen",
+    "Notification",
+]

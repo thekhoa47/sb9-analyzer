@@ -13,6 +13,7 @@ if TYPE_CHECKING:
     from .client import Client
     from .listing_seen import ListingSeen
 
+
 class SavedSearch(BaseModel):
     __tablename__ = "saved_searches"
 

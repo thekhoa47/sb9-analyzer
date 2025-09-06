@@ -13,17 +13,23 @@ from .base_model import BaseModel
 if TYPE_CHECKING:
     from .saved_search import SavedSearch
 
+
 def utcnow() -> datetime:
     return datetime.now(timezone.utc)
+
 
 class ListingSeen(BaseModel):
     __tablename__ = "listings_seen"
 
     listing_key: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
-    first_seen_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
+    first_seen_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utcnow, nullable=False
+    )
 
     saved_search_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("saved_searches.id", ondelete="CASCADE"), nullable=False
+        UUID(as_uuid=True),
+        ForeignKey("saved_searches.id", ondelete="CASCADE"),
+        nullable=False,
     )
 
     saved_search: Mapped[SavedSearch] = relationship(
@@ -33,5 +39,7 @@ class ListingSeen(BaseModel):
     )
 
     __table_args__ = (
-        UniqueConstraint("listing_key", "saved_search_id", name="uq_listings_seen_key_search"),
+        UniqueConstraint(
+            "listing_key", "saved_search_id", name="uq_listings_seen_key_search"
+        ),
     )

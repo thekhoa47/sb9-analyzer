@@ -1,5 +1,6 @@
 # test_r2.py
-import os, boto3
+import os
+import boto3
 from botocore.config import Config
 from dotenv import load_dotenv
 

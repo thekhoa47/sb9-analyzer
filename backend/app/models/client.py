@@ -10,6 +10,7 @@ from .base_model import BaseModel  # -> your abstract base with UUID/timestamps
 if TYPE_CHECKING:
     from .saved_search import SavedSearch
 
+
 class Client(BaseModel):
     __tablename__ = "clients"
 
@@ -20,7 +21,9 @@ class Client(BaseModel):
 
     sms_opt_in: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     email_opt_in: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
-    messenger_opt_in: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    messenger_opt_in: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False
+    )
 
     __table_args__ = (CheckConstraint("name <> ''", name="ck_clients_name_not_empty"),)
 

@@ -15,12 +15,12 @@ make sense. If you provide lat/lon, reproject first.
 
 from __future__ import annotations
 from dataclasses import dataclass
-from typing import Iterable, List, Optional, Sequence, Tuple, Union, Dict, Any
+from typing import List, Optional, Sequence, Tuple, Union, Dict, Any
 
 import math
-from shapely.geometry import Polygon, LineString, MultiPolygon, base, mapping
+from shapely.geometry import Polygon, LineString, MultiPolygon, mapping
 from shapely.ops import split, unary_union
-from shapely.affinity import rotate, translate
+from shapely.affinity import translate
 
 
 Geom = Union[Polygon, MultiPolygon]
@@ -54,7 +54,9 @@ def _candidate_angles(street: Optional[LineString]) -> List[float]:
     return [0.0, 90.0]
 
 
-def _long_line_through(center_x: float, center_y: float, angle_deg: float, half_extent: float = 1e4) -> LineString:
+def _long_line_through(
+    center_x: float, center_y: float, angle_deg: float, half_extent: float = 1e4
+) -> LineString:
     """
     Create a long line passing through (cx,cy) with given angle (degrees).
     """
@@ -75,7 +77,9 @@ def _slide_line(line: LineString, angle_deg: float, step: float) -> LineString:
     Positive steps are arbitrary; we scan both directions in caller.
     """
     normal_angle = math.radians(angle_deg + 90.0)
-    return translate(line, xoff=step * math.cos(normal_angle), yoff=step * math.sin(normal_angle))
+    return translate(
+        line, xoff=step * math.cos(normal_angle), yoff=step * math.sin(normal_angle)
+    )
 
 
 def _sorted_by_area(parts: Sequence[Polygon]) -> Tuple[Polygon, Polygon]:
@@ -134,7 +138,9 @@ def _split_for_ratio(
     return best
 
 
-def _house_on_one_side(big: Polygon, small: Polygon, house: Polygon) -> Optional[Tuple[Polygon, Polygon]]:
+def _house_on_one_side(
+    big: Polygon, small: Polygon, house: Polygon
+) -> Optional[Tuple[Polygon, Polygon]]:
     """
     Ensure the house footprint lies entirely within exactly one part.
     Returns (front, rear) assuming 'front' is where the house is, else None.
@@ -197,11 +203,11 @@ def evaluate_sb9_feasibility(
     street: Optional[LineString] = None,
     ratios: Sequence[float] = (0.5, 0.6),
     angle_overrides: Optional[Sequence[float]] = None,
-    ratio_tol: float = 0.03,          # ±3% area tolerance
-    search_span: float = 200.0,       # how far to slide search line (units of CRS)
-    search_steps: int = 401,          # resolution of sliding search
-    min_drive_width: float = 12.0,    # feet (or CRS units)
-    house_setback: float = 0.0,       # additional "no-drive" clearance around house
+    ratio_tol: float = 0.03,  # ±3% area tolerance
+    search_span: float = 200.0,  # how far to slide search line (units of CRS)
+    search_steps: int = 401,  # resolution of sliding search
+    min_drive_width: float = 12.0,  # feet (or CRS units)
+    house_setback: float = 0.0,  # additional "no-drive" clearance around house
 ) -> SB9SplitResult:
     """
     Try to split `parcel` according to SB9-inspired constraints:
@@ -220,7 +226,9 @@ def evaluate_sb9_feasibility(
 
     for angle in angle_list:
         for r in ratios:
-            res = _split_for_ratio(parcel, angle, r, tol=ratio_tol, span=search_span, steps=search_steps)
+            res = _split_for_ratio(
+                parcel, angle, r, tol=ratio_tol, span=search_span, steps=search_steps
+            )
             if not res:
                 continue
             part1, part2, L = res
@@ -234,14 +242,21 @@ def evaluate_sb9_feasibility(
 
             # Heuristic: ensure 'front' actually fronts the street; if not, swap
             if street is not None:
-                if front.intersection(street.buffer(SMALL)).is_empty and not rear.intersection(street.buffer(SMALL)).is_empty:
+                if (
+                    front.intersection(street.buffer(SMALL)).is_empty
+                    and not rear.intersection(street.buffer(SMALL)).is_empty
+                ):
                     front, rear = rear, front
 
             # Driveway corridor rule
             whole = unary_union([front, rear])
-            open_space = _driveway_open_space(whole, house, min_drive_width=min_drive_width, setback=house_setback)
+            open_space = _driveway_open_space(
+                whole, house, min_drive_width=min_drive_width, setback=house_setback
+            )
 
-            has_corridor = _has_corridor_between(open_space, street_for_touch, rear, width=min_drive_width)
+            has_corridor = _has_corridor_between(
+                open_space, street_for_touch, rear, width=min_drive_width
+            )
 
             best_meta = {"ratio": r, "angle": float(angle)}
 
@@ -267,7 +282,7 @@ def evaluate_sb9_feasibility(
 
     # If we reached here, no candidate passed the corridor rule.
     # If we found at least one house-valid split, return UNCERTAIN; else NO.
-    if 'maybe_uncertain' in locals():
+    if "maybe_uncertain" in locals():
         return maybe_uncertain  # type: ignore[name-defined]
     return SB9SplitResult(status="NO")
 
@@ -282,22 +297,40 @@ def to_geojson_features(result: SB9SplitResult) -> Dict[str, Any]:
     feats: List[Dict[str, Any]] = []
 
     if result.front is not None:
-        feats.append({
-            "type": "Feature",
-            "geometry": mapping(result.front),
-            "properties": {"layer": "front_lot", "status": result.status, **(result.meta or {})},
-        })
+        feats.append(
+            {
+                "type": "Feature",
+                "geometry": mapping(result.front),
+                "properties": {
+                    "layer": "front_lot",
+                    "status": result.status,
+                    **(result.meta or {}),
+                },
+            }
+        )
     if result.rear is not None:
-        feats.append({
-            "type": "Feature",
-            "geometry": mapping(result.rear),
-            "properties": {"layer": "rear_lot", "status": result.status, **(result.meta or {})},
-        })
+        feats.append(
+            {
+                "type": "Feature",
+                "geometry": mapping(result.rear),
+                "properties": {
+                    "layer": "rear_lot",
+                    "status": result.status,
+                    **(result.meta or {}),
+                },
+            }
+        )
     if result.split_line is not None:
-        feats.append({
-            "type": "Feature",
-            "geometry": mapping(result.split_line),
-            "properties": {"layer": "split_line", "status": result.status, **(result.meta or {})},
-        })
+        feats.append(
+            {
+                "type": "Feature",
+                "geometry": mapping(result.split_line),
+                "properties": {
+                    "layer": "split_line",
+                    "status": result.status,
+                    **(result.meta or {}),
+                },
+            }
+        )
 
     return {"type": "FeatureCollection", "features": feats}

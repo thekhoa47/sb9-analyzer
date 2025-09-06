@@ -6,6 +6,7 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from typing import Iterable, Optional
 
+
 class GmailSMTPProvider:
     def __init__(self):
         self.host = "smtp.gmail.com"
@@ -15,7 +16,9 @@ class GmailSMTPProvider:
         self.from_email = os.environ["EMAIL_FROM"]
         self.from_name = os.getenv("EMAIL_FROM_NAME", "Deal Alerts")
 
-    async def send(self, to_email: str, subject: str, html: str, text: Optional[str] = None):
+    async def send(
+        self, to_email: str, subject: str, html: str, text: Optional[str] = None
+    ):
         # Build MIME message
         msg = MIMEMultipart("alternative")
         msg["From"] = f"{self.from_name} <{self.from_email}>"
@@ -36,7 +39,9 @@ class GmailSMTPProvider:
             password=self.password,
         )
 
-    async def send_bulk(self, items: Iterable[tuple[str, str, str, Optional[str]]], concurrency: int = 5):
+    async def send_bulk(
+        self, items: Iterable[tuple[str, str, str, Optional[str]]], concurrency: int = 5
+    ):
         # items: (to_email, subject, html, text)
         sem = asyncio.Semaphore(concurrency)
 

@@ -16,7 +16,7 @@ class SB9Label(str, enum.Enum):
 class SB9Result(Base):
     __tablename__ = "sb9_results"
 
-    id          = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     property_id = Column(
         UUID(as_uuid=True),
         ForeignKey("properties.id", ondelete="CASCADE"),
@@ -24,10 +24,14 @@ class SB9Result(Base):
         unique=True,
     )
 
-    predicted_label = Column(SAEnum(SB9Label, name="sb9_label", create_type=False), nullable=False)
-    human_label     = Column(SAEnum(SB9Label, name="sb9_label", create_type=False))
+    predicted_label = Column(
+        SAEnum(SB9Label, name="sb9_label", create_type=False), nullable=False
+    )
+    human_label = Column(SAEnum(SB9Label, name="sb9_label", create_type=False))
 
-    created_at = Column(TIMESTAMP(timezone=True), nullable=False, server_default=text("now()"))
+    created_at = Column(
+        TIMESTAMP(timezone=True), nullable=False, server_default=text("now()")
+    )
     updated_at = Column(TIMESTAMP(timezone=True))
 
     property = relationship("Property", back_populates="result", uselist=False)

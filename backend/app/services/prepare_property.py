@@ -1,6 +1,5 @@
 from fastapi import FastAPI, HTTPException
-from uuid import UUID
-from typing import Optional, Tuple
+from typing import Tuple
 from io import BytesIO
 import os
 
@@ -16,7 +15,9 @@ from geoalchemy2.shape import to_shape, from_shape
 
 from app.utils.geocode import geocode_address
 from app.utils.naip import find_naip_assets_for_bbox
-from app.utils.mask import mask_naip_with_parcel_mosaic  # will return PIL Image with return_image=True
+from app.utils.mask import (
+    mask_naip_with_parcel_mosaic,
+)  # will return PIL Image with return_image=True
 from app.utils.parcel import get_parcel_geojson_with_props
 from app.storage.r2 import upload_bytes_and_get_url
 from app.schemas import MaskResult, ParcelStats
@@ -29,7 +30,10 @@ app = FastAPI(title="sb9-analyzer backend", version="0.3.1")
 
 # ---------- Small adapter: mask -> PNG bytes (no /tmp write) ----------
 
-def mask_to_png_bytes(naip_hrefs, parcel_geojson, superres_factor: float = 4.0) -> bytes:
+
+def mask_to_png_bytes(
+    naip_hrefs, parcel_geojson, superres_factor: float = 4.0
+) -> bytes:
     """
     Assumes mask_naip_with_parcel_mosaic can return a PIL.Image when return_image=True.
     """
@@ -43,7 +47,9 @@ def mask_to_png_bytes(naip_hrefs, parcel_geojson, superres_factor: float = 4.0) 
     img.save(bio, format="PNG")
     return bio.getvalue()
 
+
 # ---------- Main Function ----------
+
 
 def prepare_property(
     db: Session,
@@ -53,10 +59,8 @@ def prepare_property(
     Runs the same logic as /prep-image but returns (property_id, MaskResult)
     so other endpoints can reuse it without HTTP round-trips.
     """
-     # 1) Geocode (seed for parcel lookup)
-    lat_seed, lon_seed, meta = geocode_address(
-        address, MAPBOX_TOKEN
-    )
+    # 1) Geocode (seed for parcel lookup)
+    lat_seed, lon_seed, meta = geocode_address(address, MAPBOX_TOKEN)
 
     # Pull official postal parts (what we use for identity + display)
     parts = meta.get("official_parts", {}) or {}
@@ -85,7 +89,9 @@ def prepare_property(
             g_existing = to_shape(existing.parcel_geom)
             to_m = Transformer.from_crs("EPSG:4326", "EPSG:3857", always_xy=True)
             gm = shp_transform(lambda x, y: to_m.transform(x, y), g_existing)
-            parcel_stats = ParcelStats(area_m2=round(gm.area, 2), perimeter_m=round(gm.length, 2))
+            parcel_stats = ParcelStats(
+                area_m2=round(gm.area, 2), perimeter_m=round(gm.length, 2)
+            )
 
         return existing.id, MaskResult(
             id=existing.id,
@@ -111,10 +117,14 @@ def prepare_property(
     g = shape(parcel_geom)  # WGS84 GeoJSON
     minx, miny, maxx, maxy = g.bounds
     pad_deg = 0.0008
-    assets = find_naip_assets_for_bbox(minx - pad_deg, miny - pad_deg, maxx + pad_deg, maxy + pad_deg, limit=12)
+    assets = find_naip_assets_for_bbox(
+        minx - pad_deg, miny - pad_deg, maxx + pad_deg, maxy + pad_deg, limit=12
+    )
     hrefs = [a.href for a in assets]
     if not hrefs:
-        raise HTTPException(status_code=422, detail = "No NAIP assets cover the parcel extent.")
+        raise HTTPException(
+            status_code=422, detail="No NAIP assets cover the parcel extent."
+        )
 
     png_bytes = mask_to_png_bytes(hrefs, parcel_geom, superres_factor=4.0)
 
@@ -144,19 +154,26 @@ def prepare_property(
         # image_url set after upload
     }
     # Use ON CONFLICT to handle a rare race (someone inserted after our fast lookup)
-    ins = pg_insert(Property.__table__).values(**row).on_conflict_do_update(
-        constraint="ux_properties_addr",
-        set_={
-            "parcel_geom": pg_insert(Property.__table__).excluded.parcel_geom,
-            "parcel_centroid": pg_insert(Property.__table__).excluded.parcel_centroid,
-            "beds": pg_insert(Property.__table__).excluded.beds,
-            "baths": pg_insert(Property.__table__).excluded.baths,
-            "year_built": pg_insert(Property.__table__).excluded.year_built,
-            "living_area": pg_insert(Property.__table__).excluded.living_area,
-            "lot_area": pg_insert(Property.__table__).excluded.lot_area,
-            "updated_at": text("now()"),
-        },
-    ).returning(Property.id)
+    ins = (
+        pg_insert(Property.__table__)
+        .values(**row)
+        .on_conflict_do_update(
+            constraint="ux_properties_addr",
+            set_={
+                "parcel_geom": pg_insert(Property.__table__).excluded.parcel_geom,
+                "parcel_centroid": pg_insert(
+                    Property.__table__
+                ).excluded.parcel_centroid,
+                "beds": pg_insert(Property.__table__).excluded.beds,
+                "baths": pg_insert(Property.__table__).excluded.baths,
+                "year_built": pg_insert(Property.__table__).excluded.year_built,
+                "living_area": pg_insert(Property.__table__).excluded.living_area,
+                "lot_area": pg_insert(Property.__table__).excluded.lot_area,
+                "updated_at": text("now()"),
+            },
+        )
+        .returning(Property.id)
+    )
     property_id = db.execute(ins).scalar_one()
     db.commit()
 

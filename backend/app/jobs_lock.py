@@ -5,6 +5,7 @@ from app.db import SessionLocal
 
 LOCK_KEY = 0x5B9_0001  # arbitrary 64-bit int; keep stable
 
+
 @contextmanager
 def poll_lock(timeout_seconds: int = 0):
     """
@@ -12,7 +13,9 @@ def poll_lock(timeout_seconds: int = 0):
     """
     db = SessionLocal()
     try:
-        acquired = db.execute(text("SELECT pg_try_advisory_lock(:k)"), {"k": LOCK_KEY}).scalar()
+        acquired = db.execute(
+            text("SELECT pg_try_advisory_lock(:k)"), {"k": LOCK_KEY}
+        ).scalar()
         if not acquired:
             yield False
             return

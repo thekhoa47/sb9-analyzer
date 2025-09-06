@@ -4,12 +4,15 @@ from typing import Optional, List
 from uuid import UUID
 from datetime import datetime
 
+
 class PrepImageRequest(BaseModel):
     address: str
+
 
 class ParcelStats(BaseModel):
     area_m2: float
     perimeter_m: float
+
 
 class MaskResult(BaseModel):
     # Mirror your properties table (plus image_url), not user input:
@@ -27,21 +30,26 @@ class MaskResult(BaseModel):
     # Optional helper for UI
     parcel_stats: Optional[ParcelStats] = None
 
+
 class PredictReq(BaseModel):
     url: str  # public image URL you already store in R2 (or anywhere)
+
 
 class PredictResp(BaseModel):
     label: str
     confidence: float
     probs: dict
 
+
 class ReloadReq(BaseModel):
     bucket: Optional[str] = None
     key: Optional[str] = None
 
+
 class AnalyzeResponse(MaskResult):
     predicted_label: str  # "YES" / "NO"
-    
+
+
 class PropertyOut(BaseModel):
     id: UUID
     address: str
@@ -57,7 +65,8 @@ class PropertyOut(BaseModel):
     created_at: datetime
     updated_at: Optional[datetime] = None
     model_config = ConfigDict(from_attributes=True)
-    
+
+
 class Sb9ResultsOut(BaseModel):
     id: UUID
     property_id: UUID
@@ -67,9 +76,11 @@ class Sb9ResultsOut(BaseModel):
     updated_at: Optional[datetime] = None
     model_config = ConfigDict(from_attributes=True)
 
+
 class ResultWithProperty(Sb9ResultsOut):
     property: PropertyOut
     model_config = ConfigDict(from_attributes=True)
+
 
 class ResultsPage(BaseModel):
     total: int
@@ -77,7 +88,9 @@ class ResultsPage(BaseModel):
     offset: int
     data: list[ResultWithProperty]
 
+
 from pydantic import BaseModel
+
 
 class ClientIn(BaseModel):
     name: str
@@ -87,6 +100,7 @@ class ClientIn(BaseModel):
     sms_opt_in: bool = False
     email_opt_in: bool = False
     messenger_opt_in: bool = False
+
 
 class ClientOut(ClientIn):
     id: UUID
@@ -101,18 +115,24 @@ class SavedSearchIn(BaseModel):
     baths_min: int = 0
     max_price: int | None = None
 
+
 class SavedSearchOut(SavedSearchIn):
     id: UUID
     client_id: UUID
     cursor_iso: str | None = None
 
+
 class ClientsWithSearchesOut(ClientOut):
     model_config = ConfigDict(from_attributes=True, populate_by_name=True)
     # Pull from the ORM attribute `searches`, output as `listing_preferences`
-    listing_preferences: List[SavedSearchOut] = Field(default_factory=list, alias="searches")
-    
+    listing_preferences: List[SavedSearchOut] = Field(
+        default_factory=list, alias="searches"
+    )
+
+
 class OnboardNewClientIn(ClientIn):
     listing_preferences: List[SavedSearchIn]
+
 
 class OnboardNewClientOut(BaseModel):
     client: ClientOut

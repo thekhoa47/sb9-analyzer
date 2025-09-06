@@ -2,8 +2,10 @@
 from .base import Base
 from ._mixins import UUIDPKMixin, TimestampMixin
 
+
 class BaseModel(UUIDPKMixin, TimestampMixin, Base):
     """Abstract base model – inherit this in your real models."""
+
     __abstract__ = True
 
     # optional conveniences

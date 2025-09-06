@@ -2,6 +2,7 @@ from pydantic import BaseModel
 from pathlib import Path
 import os
 
+
 class Settings(BaseModel):
     PORT: int = int(os.getenv("PORT", "8000"))
     ENV: str = os.getenv("ENV", "dev")
@@ -21,7 +22,7 @@ class Settings(BaseModel):
     )
     SB9_MODEL_PATH: str = os.getenv("SB9_MODEL_PATH")
     R2_MODEL_BUCKET: str = os.getenv("R2_MODEL_BUCKET")
-    R2_MODEL_KEY: str    = os.getenv("R2_MODEL_KEY")
+    R2_MODEL_KEY: str = os.getenv("R2_MODEL_KEY")
     MODEL_CACHE_DIR: str = Path(os.getenv("MODEL_CACHE_DIR"))
 
     RESO_BASE_URL: str = os.getenv("RESO_BASE_URL")
@@ -47,5 +48,6 @@ class Settings(BaseModel):
     DEFAULT_BEDS_MIN: int = int(os.getenv("DEFAULT_BEDS_MIN"))
     DEFAULT_BATHS_MIN: int = int(os.getenv("DEFAULT_BATHS_MIN"))
     DEFAULT_MAX_PRICE: int = int(os.getenv("DEFAULT_MAX_PRICE"))
+
 
 settings = Settings()

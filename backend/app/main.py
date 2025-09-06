@@ -5,9 +5,8 @@ from fastapi.middleware.cors import CORSMiddleware
 import boto3
 from botocore.client import Config
 from pathlib import Path
-import os
 import requests
-from typing import Optional, Literal, List, Mapping, Tuple
+from typing import Optional, List
 from sqlalchemy.orm import Session, selectinload
 from sqlalchemy import or_, select
 from fastapi_pagination import Page, Params
@@ -16,7 +15,6 @@ import logging
 
 from shapely.geometry import shape
 from contextlib import asynccontextmanager
-from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy import text
 
@@ -31,8 +29,16 @@ from .ml.sb9_model import SB9Runner
 from .utils.geo_norm import normalize_state
 from .utils.parse_filters import parse_filters
 from .models import Client, SavedSearch
-from .schemas import ClientIn, ClientOut, SavedSearchIn, SavedSearchOut, OnboardNewClientIn, OnboardNewClientOut, ClientsWithSearchesOut
-from .jobs import start_scheduler, shutdown_scheduler, trigger_poll_once
+from .schemas import (
+    ClientIn,
+    ClientOut,
+    SavedSearchIn,
+    SavedSearchOut,
+    OnboardNewClientIn,
+    OnboardNewClientOut,
+    ClientsWithSearchesOut,
+)
+from .jobs import start_scheduler, shutdown_scheduler
 from .config import settings
 from app.routers import messenger_webhook, tasks
 
@@ -48,7 +54,11 @@ MODEL_RUNNER: SB9Runner | None = None
 
 
 def _r2_client():
-    if not (settings.R2_ACCESS_KEY_ID and settings.R2_SECRET_ACCESS_KEY and settings.R2_ENDPOINT_URL):
+    if not (
+        settings.R2_ACCESS_KEY_ID
+        and settings.R2_SECRET_ACCESS_KEY
+        and settings.R2_ENDPOINT_URL
+    ):
         raise RuntimeError("R2 credentials/endpoint not configured for model download")
     session = boto3.session.Session()
     return session.client(
@@ -59,6 +69,7 @@ def _r2_client():
         region_name="auto",
         config=Config(signature_version="s3v4"),
     )
+
 
 def _ensure_local_model() -> Path:
     """
@@ -71,11 +82,18 @@ def _ensure_local_model() -> Path:
         s3 = _r2_client()
         # stream to temp then rename (atomic-ish)
         tmp_path = local_path.with_suffix(local_path.suffix + ".part")
-        with s3.get_object(Bucket=settings.R2_MODEL_BUCKET, Key=settings.R2_MODEL_KEY)["Body"] as body, open(tmp_path, "wb") as f:
+        with (
+            s3.get_object(Bucket=settings.R2_MODEL_BUCKET, Key=settings.R2_MODEL_KEY)[
+                "Body"
+            ] as body,
+            open(tmp_path, "wb") as f,
+        ):
             for chunk in iter(lambda: body.read(1024 * 1024), b""):
                 f.write(chunk)
         tmp_path.replace(local_path)
-        print(f"[SB9] Downloaded model from r2://{settings.R2_MODEL_BUCKET}/{settings.R2_MODEL_KEY} -> {local_path}")
+        print(
+            f"[SB9] Downloaded model from r2://{settings.R2_MODEL_BUCKET}/{settings.R2_MODEL_KEY} -> {local_path}"
+        )
     else:
         print(f"[SB9] Using cached model at {local_path}")
     return local_path
@@ -105,6 +123,7 @@ async def lifespan(app: FastAPI):
         MODEL_RUNNER = None
         log.info("[SB9] Model unloaded")
 
+
 app = FastAPI(title="sb9-analyzer backend", version="0.3.0", lifespan=lifespan)
 
 app.add_middleware(
@@ -116,8 +135,6 @@ app.add_middleware(
         "https://anhdao.vercel.app",
         "https://www.hannahanhdao.com",
         "https://hannahanhdao.com",
-        
-
     ],
     # Allow Vercel preview deployments too:
     allow_origin_regex=r"^https://anhdao-.*\.vercel\.app$",
@@ -128,15 +145,18 @@ app.add_middleware(
 
 # ---------- Health ----------
 
+
 @app.get("/health")
 def health():
     return {"ok": True}
+
 
 # ---------- Routers ----------
 app.include_router(messenger_webhook.router)
 app.include_router(tasks.router)
 
 # ---------- Main endpoint ----------
+
 
 @app.post("/prep-image", response_model=MaskResult)
 def prep_image(
@@ -145,6 +165,7 @@ def prep_image(
 ):
     *_, mask = prepare_property(db, req.address)
     return mask
+
 
 @app.post("/analyze", response_model=AnalyzeResponse)
 def analyze(
@@ -157,19 +178,23 @@ def analyze(
     # 2) infer (model loaded once via lifespan)
     if MODEL_RUNNER is None:
         raise HTTPException(
-            status_code = 503,
-            detail=f"No geocoding results for '{req.address}'. Please check spelling."
+            status_code=503,
+            detail=f"No geocoding results for '{req.address}'. Please check spelling.",
         )
     label, _conf, _probs = MODEL_RUNNER.predict_from_url(mask.image_url)
     # label should be one of your training classes, e.g., "YES"/"NO"
 
     # 3) upsert sb9_results (one-to-one on property_id)
-    ins = pg_insert(SB9Result.__table__).values(
+    ins = pg_insert(
+        SB9Result.__table__
+    ).values(
         property_id=property_id,
-        predicted_label=label,   # SB9Result.predicted_label is an Enum or Text; ensure types match
+        predicted_label=label,  # SB9Result.predicted_label is an Enum or Text; ensure types match
     )
     stmt = ins.on_conflict_do_update(
-        index_elements=["property_id"],   # or constraint="uq_sb9_results_property_id" if you named it
+        index_elements=[
+            "property_id"
+        ],  # or constraint="uq_sb9_results_property_id" if you named it
         set_={
             "predicted_label": ins.excluded.predicted_label,
             "updated_at": text("now()"),
@@ -181,15 +206,19 @@ def analyze(
     # 4) return prep-image payload + label
     return AnalyzeResponse(**mask.model_dump(), predicted_label=label)
 
+
 ALLOWED_SORT = {"address", "city", "state", "zip", "label"}
+
 
 @app.get("/results", response_model=Page[ResultWithProperty])
 def list_results(
     request: Request,
     db: Session = Depends(get_db),
-    params: Params = Depends(),                   # ?page=1&size=50
-    sort_by: List[str] = Query([], alias="sortBy"), # multi-sort: sortBy=city:DESC&sortBy=state:ASC
-    search: Optional[str] = Query(None),           # free text over address/city/state
+    params: Params = Depends(),  # ?page=1&size=50
+    sort_by: List[str] = Query(
+        [], alias="sortBy"
+    ),  # multi-sort: sortBy=city:DESC&sortBy=state:ASC
+    search: Optional[str] = Query(None),  # free text over address/city/state
 ):
     # Base selectable (1:1 join + eager load)
     stmt = (
@@ -201,9 +230,9 @@ def list_results(
     # Filters
     filters = parse_filters(request.query_params)
     colmap = {
-        "city":  Property.city,
+        "city": Property.city,
         "state": Property.state,
-        "zip":   Property.zip,
+        "zip": Property.zip,
         "label": SB9Result.predicted_label,
     }
     for field, op, value in filters:
@@ -218,17 +247,23 @@ def list_results(
             stmt = stmt.where(col.ilike(f"%{value}%"))
         elif op == "$in":
             vals = [v.strip() for v in value.split(",") if v.strip()]
-            if vals: stmt = stmt.where(col.in_(vals))
+            if vals:
+                stmt = stmt.where(col.in_(vals))
         elif op == "$nin":
             vals = [v.strip() for v in value.split(",") if v.strip()]
-            if vals: stmt = stmt.where(~col.in_(vals))
+            if vals:
+                stmt = stmt.where(~col.in_(vals))
 
     # Search over address/city/state (+ “California” -> CA)
     if search:
         needle = search.strip()
         like = f"%{needle}%"
         maybe_abbr = normalize_state(needle)
-        ors = [Property.address.ilike(like), Property.city.ilike(like), Property.state.ilike(like)]
+        ors = [
+            Property.address.ilike(like),
+            Property.city.ilike(like),
+            Property.state.ilike(like),
+        ]
         if maybe_abbr:
             ors.append(Property.state == maybe_abbr)
         stmt = stmt.where(or_(*ors))
@@ -236,10 +271,10 @@ def list_results(
     # Multi-sort parsing
     sort_map = {
         "address": Property.address,
-        "city":    Property.city,
-        "state":   Property.state,
-        "zip":     Property.zip,
-        "label":   SB9Result.predicted_label,
+        "city": Property.city,
+        "state": Property.state,
+        "zip": Property.zip,
+        "label": SB9Result.predicted_label,
     }
     order_cols = []
     for item in sort_by:
@@ -263,39 +298,47 @@ def list_results(
 @app.post("/clients", response_model=ClientOut)
 def create_client(payload: ClientIn, db: Session = Depends(get_db)):
     c = Client(**payload.model_dict())
-    db.add(c); db.commit(); db.refresh(c)
+    db.add(c)
+    db.commit()
+    db.refresh(c)
     return ClientOut(**{**payload.model_dump(), "id": c.id})
+
 
 @app.get("/clients/{client_id}", response_model=ClientOut)
 def get_client(client_id: int, db: Session = Depends(get_db)):
     c = db.get(Client, client_id)
-    if not c: raise HTTPException(404)
+    if not c:
+        raise HTTPException(404)
     return ClientOut(
-        id=c.id, name=c.name, email=c.email, phone=c.phone,
+        id=c.id,
+        name=c.name,
+        email=c.email,
+        phone=c.phone,
         messenger_psid=c.messenger_psid,
-        sms_opt_in=c.sms_opt_in, email_opt_in=c.email_opt_in, messenger_opt_in=c.messenger_opt_in
+        sms_opt_in=c.sms_opt_in,
+        email_opt_in=c.email_opt_in,
+        messenger_opt_in=c.messenger_opt_in,
     )
+
 
 @app.get("/clients", response_model=Page[ClientsWithSearchesOut])
 def list_clients(
     request: Request,
     db: Session = Depends(get_db),
-    params: Params = Depends(),                   # ?page=1&size=50
-    search: Optional[str] = Query(None),           # free text over name/email/phone/messenger_psid
+    params: Params = Depends(),  # ?page=1&size=50
+    search: Optional[str] = Query(
+        None
+    ),  # free text over name/email/phone/messenger_psid
 ):
     # Base selectable (1:1 join + eager load)
-    stmt = (
-        select(Client)
-        .join(Client.searches)
-        .options(selectinload(Client.searches))
-    )
+    stmt = select(Client).join(Client.searches).options(selectinload(Client.searches))
 
     # Filters
     filters = parse_filters(request.query_params)
     colmap = {
-        "sms_opt_in":  Client.sms_opt_in,
+        "sms_opt_in": Client.sms_opt_in,
         "email_opt_in": Client.email_opt_in,
-        "messenger_opt_in":   Client.messenger_opt_in,
+        "messenger_opt_in": Client.messenger_opt_in,
     }
     for field, value in filters:
         col = colmap[field]
@@ -305,27 +348,46 @@ def list_clients(
     if search:
         needle = search.strip()
         like = f"%{needle}%"
-        ors = [Client.name.ilike(like), Client.email.ilike(like), Client.phone.ilike(like), Client.messenger_psid.ilike(like)]
+        ors = [
+            Client.name.ilike(like),
+            Client.email.ilike(like),
+            Client.phone.ilike(like),
+            Client.messenger_psid.ilike(like),
+        ]
         stmt = stmt.where(or_(*ors))
 
     return paginate(db, stmt, params)
+
 
 # --- Saved Searches ---
 @app.post("/saved-searches", response_model=SavedSearchOut)
 def create_saved_search(payload: SavedSearchIn, db: Session = Depends(get_db)):
     s = SavedSearch(**payload.model_dump())
-    db.add(s); db.commit(); db.refresh(s)
-    return SavedSearchOut(**{**payload.model_dump(), "id": s.id, "cursor_iso": s.cursor_iso})
+    db.add(s)
+    db.commit()
+    db.refresh(s)
+    return SavedSearchOut(
+        **{**payload.model_dump(), "id": s.id, "cursor_iso": s.cursor_iso}
+    )
+
 
 @app.get("/saved-searches/{search_id}", response_model=SavedSearchOut)
 def get_saved_search(search_id: int, db: Session = Depends(get_db)):
     s = db.get(SavedSearch, search_id)
-    if not s: raise HTTPException(404)
+    if not s:
+        raise HTTPException(404)
     return SavedSearchOut(
-        id=s.id, name=s.name, city=s.city, radius_miles=s.radius_miles,
-        beds_min=s.beds_min, baths_min=s.baths_min, max_price=s.max_price,
-        client_id=s.client_id, cursor_iso=s.cursor_iso
+        id=s.id,
+        name=s.name,
+        city=s.city,
+        radius_miles=s.radius_miles,
+        beds_min=s.beds_min,
+        baths_min=s.baths_min,
+        max_price=s.max_price,
+        client_id=s.client_id,
+        cursor_iso=s.cursor_iso,
     )
+
 
 # --- Onboard new clients ---
 @app.post("/onboard-new-client", response_model=OnboardNewClientOut, status_code=201)
@@ -362,19 +424,21 @@ def onboard_new_client(payload: OnboardNewClientIn, db: Session = Depends(get_db
                 db.add(s)
                 db.flush()  # get s.id, s.cursor_iso
                 # Build output (you can also use Pydantic model_validate if on Pydantic v2)
-                saved_searches.append(SavedSearchOut(
-                    id=str(s.id),
-                    client_id=str(s.client_id),
-                    name=s.name,
-                    city=s.city,
-                    radius_miles=s.radius_miles,
-                    beds_min=s.beds_min,
-                    baths_min=s.baths_min,
-                    max_price=s.max_price,
-                    cursor_iso=s.cursor_iso,
-                    created_at=s.created_at.isoformat(),
-                    updated_at=s.updated_at.isoformat() if s.updated_at else None
-                ))
+                saved_searches.append(
+                    SavedSearchOut(
+                        id=str(s.id),
+                        client_id=str(s.client_id),
+                        name=s.name,
+                        city=s.city,
+                        radius_miles=s.radius_miles,
+                        beds_min=s.beds_min,
+                        baths_min=s.baths_min,
+                        max_price=s.max_price,
+                        cursor_iso=s.cursor_iso,
+                        created_at=s.created_at.isoformat(),
+                        updated_at=s.updated_at.isoformat() if s.updated_at else None,
+                    )
+                )
 
         # 3) Return combined response (commit happened on exiting the context)
         client_out = ClientOut(
@@ -387,7 +451,7 @@ def onboard_new_client(payload: OnboardNewClientIn, db: Session = Depends(get_db
             sms_opt_in=client.sms_opt_in,
             messenger_opt_in=client.messenger_opt_in,
             created_at=client.created_at.isoformat(),
-            updated_at=client.updated_at.isoformat() if client.updated_at else None
+            updated_at=client.updated_at.isoformat() if client.updated_at else None,
         )
 
         return OnboardNewClientOut(client=client_out, saved_searches=saved_searches)
@@ -397,9 +461,10 @@ def onboard_new_client(payload: OnboardNewClientIn, db: Session = Depends(get_db
         db.rollback()
         raise HTTPException(status_code=400, detail=str(e))
 
-#-----------------------------------
+
+# -----------------------------------
 # ---------- Debug routes ----------
-#-----------------------------------
+# -----------------------------------
 
 
 @app.get("/debug/geocode")
@@ -437,12 +502,15 @@ def debug_naip(address: str):
     g = shape(geom)
     minx, miny, maxx, maxy = g.bounds
     pad = 0.0008
-    assets = find_naip_assets_for_bbox(minx - pad, miny - pad, maxx + pad, maxy + pad, limit=12)
+    assets = find_naip_assets_for_bbox(
+        minx - pad, miny - pad, maxx + pad, maxy + pad, limit=12
+    )
     return {
         "count": len(assets),
         "asset_hrefs": [a.href for a in assets],
         "stac_ids": [getattr(a, "id", None) for a in assets],
     }
+
 
 @app.get("/debug/analyze")
 def debug_analyze(address: str, db: Session = Depends(get_db)):

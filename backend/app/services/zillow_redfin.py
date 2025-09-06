@@ -8,6 +8,7 @@ log = logging.getLogger("sb9.zillow")
 
 client = OpenAI(api_key=settings.OPENAI_API_KEY)
 
+
 def fetch_listings_via_gpt(saved_search) -> list[dict]:
     """
     Calls GPT to fetch Zillow/Redfin deals that match the saved_search.
@@ -29,31 +30,39 @@ def fetch_listings_via_gpt(saved_search) -> list[dict]:
     log.info("Prompting GPT for search %s (%s)", saved_search.id, saved_search.city)
 
     response = client.chat.completions.create(
-        model="gpt-4o-mini",   # small & cheap model
-        messages=[{"role": "system", "content": "You are a real estate data fetcher."},
-                  {"role": "user", "content": prompt}],
-        response_format={"type": "json_schema",
-                         "json_schema": {
-                             "name": "listing_response",
-                             "schema": {
-                                 "type": "object",
-                                 "properties": {
-                                     "listings": {
-                                         "type": "array",
-                                         "items": {
-                                             "type": "object",
-                                             "properties": {
-                                                 "ListingKey": {"type": "string"},
-                                                 "UnparsedAddress": {"type": "string"},
-                                                 "ListPrice": {"type": "number"}
-                                             },
-                                             "required": ["ListingKey", "UnparsedAddress", "ListPrice"]
-                                         }
-                                     }
-                                 },
-                                 "required": ["listings"]
-                             }
-                         }},
+        model="gpt-4o-mini",  # small & cheap model
+        messages=[
+            {"role": "system", "content": "You are a real estate data fetcher."},
+            {"role": "user", "content": prompt},
+        ],
+        response_format={
+            "type": "json_schema",
+            "json_schema": {
+                "name": "listing_response",
+                "schema": {
+                    "type": "object",
+                    "properties": {
+                        "listings": {
+                            "type": "array",
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "ListingKey": {"type": "string"},
+                                    "UnparsedAddress": {"type": "string"},
+                                    "ListPrice": {"type": "number"},
+                                },
+                                "required": [
+                                    "ListingKey",
+                                    "UnparsedAddress",
+                                    "ListPrice",
+                                ],
+                            },
+                        }
+                    },
+                    "required": ["listings"],
+                },
+            },
+        },
         temperature=0,
     )
 

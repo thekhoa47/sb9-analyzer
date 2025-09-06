@@ -1,7 +1,10 @@
 # app/routers/messenger_webhook.py
 from __future__ import annotations
 
-import hashlib, hmac, json, logging
+import hashlib
+import hmac
+import json
+import logging
 from fastapi import APIRouter, Request, HTTPException, Query
 from fastapi.responses import PlainTextResponse
 from app.config import settings
@@ -10,6 +13,7 @@ log = logging.getLogger("sb9.messenger")
 router = APIRouter(prefix="/webhooks/messenger", tags=["messenger"])
 
 # --- GET: Verification (FB calls this once when you click "Verify and Save") ---
+
 
 @router.get("", response_class=PlainTextResponse)
 @router.get("/", response_class=PlainTextResponse)  # handle trailing slash too
@@ -26,6 +30,7 @@ async def verify(
 
 # --- POST: Message events (deliveries, incoming messages, postbacks, etc.) ---
 
+
 def _verify_signature(request: Request, body: bytes):
     sig = request.headers.get("X-Hub-Signature-256")
     if not sig:
@@ -36,6 +41,7 @@ def _verify_signature(request: Request, body: bytes):
     expected = "sha256=" + mac.hexdigest()
     if not hmac.compare_digest(sig, expected):
         raise HTTPException(status_code=403, detail="Bad signature")
+
 
 @router.post("")
 @router.post("/")
