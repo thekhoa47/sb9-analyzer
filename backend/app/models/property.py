@@ -1,8 +1,7 @@
-from sqlalchemy import Column, Integer, Text, CheckConstraint, CHAR
+from sqlalchemy import Column, Integer, Text, CheckConstraint, CHAR, Index
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from geoalchemy2 import Geometry
-
 from .base import BaseModel
 
 
@@ -36,9 +35,6 @@ class Property(BaseModel):
         passive_deletes=True,
     )
 
-
-# Indexes
-from sqlalchemy import Index
 
 Index(
     "ux_properties_addr",

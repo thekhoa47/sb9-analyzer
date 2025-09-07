@@ -10,6 +10,7 @@ import logging
 
 log = logging.getLogger("sb9")
 
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     try:
@@ -30,11 +31,7 @@ async def lifespan(app: FastAPI):
 
 def create_app() -> FastAPI:
     """Create and configure the FastAPI application"""
-    app = FastAPI(
-        title="sb9-analyzer backend",
-        version="0.3.0",
-        lifespan=lifespan
-    )
+    app = FastAPI(title="sb9-analyzer backend", version="0.3.0", lifespan=lifespan)
 
     # Configure CORS
     app.add_middleware(

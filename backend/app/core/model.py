@@ -8,6 +8,7 @@ from app.ml.sb9_model import SB9Runner
 
 log = logging.getLogger("sb9")
 
+
 class ModelManager:
     def __init__(self):
         self.model_runner: SB9Runner | None = None
@@ -18,7 +19,9 @@ class ModelManager:
             and settings.R2_SECRET_ACCESS_KEY
             and settings.R2_ENDPOINT_URL
         ):
-            raise RuntimeError("R2 credentials/endpoint not configured for model download")
+            raise RuntimeError(
+                "R2 credentials/endpoint not configured for model download"
+            )
         session = boto3.session.Session()
         return session.client(
             "s3",
@@ -41,9 +44,9 @@ class ModelManager:
             # stream to temp then rename (atomic-ish)
             tmp_path = local_path.with_suffix(local_path.suffix + ".part")
             with (
-                s3.get_object(Bucket=settings.R2_MODEL_BUCKET, Key=settings.R2_MODEL_KEY)[
-                    "Body"
-                ] as body,
+                s3.get_object(
+                    Bucket=settings.R2_MODEL_BUCKET, Key=settings.R2_MODEL_KEY
+                )["Body"] as body,
                 open(tmp_path, "wb") as f,
             ):
                 for chunk in iter(lambda: body.read(1024 * 1024), b""):
@@ -75,5 +78,6 @@ class ModelManager:
     @property
     def is_loaded(self) -> bool:
         return self.model_runner is not None
+
 
 model_manager = ModelManager()

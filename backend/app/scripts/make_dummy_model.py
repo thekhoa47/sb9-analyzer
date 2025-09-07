@@ -1,5 +1,7 @@
 # scripts/make_dummy_sb9.py
-import os, time, torch
+import os
+import time
+import torch
 import torch.nn as nn
 from torchvision import models
 
@@ -18,7 +20,7 @@ artifact = {
     "class_to_idx": class_to_idx,
     "input_size": 224,
     "mean": [0.485, 0.456, 0.406],
-    "std":  [0.229, 0.224, 0.225],
+    "std": [0.229, 0.224, 0.225],
     "model_name": "mobilenet_v3_small",
     "version": "v0-dummy",
     "created_at": time.time(),

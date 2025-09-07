@@ -7,6 +7,7 @@ Base = declarative_base()
 
 class BaseModel(UUIDPKMixin, TimestampMixin, Base):
     """Abstract base model with UUID primary key and timestamp fields."""
+
     __abstract__ = True
 
     def to_dict(self):
