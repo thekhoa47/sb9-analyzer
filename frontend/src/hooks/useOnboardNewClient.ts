@@ -5,7 +5,7 @@ import { FormValues } from '@/app/admin/clients/formSchema';
 
 export function useOnboardNewClient() {
   return useMutation<NewClient, Error, FormValues>({
-    mutationKey: ['onboard-new-client'],
+    mutationKey: ['clients'],
     mutationFn: (formValues) => onboardNewClient(formValues),
   });
 }

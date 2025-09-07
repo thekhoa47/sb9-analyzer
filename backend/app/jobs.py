@@ -9,8 +9,7 @@ from typing import Optional
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from sqlalchemy.orm import Session
 
-from app.config import settings
-from app.db import SessionLocal
+from .core import settings, SessionLocal
 from app.models import SavedSearch, ListingSeen, Notification, Client
 from app.services.reso import poll_reso
 from app.services.analyze_listing import analyze_listing

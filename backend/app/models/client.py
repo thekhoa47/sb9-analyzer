@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 from sqlalchemy import String, Boolean, CheckConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from .base_model import BaseModel  # -> your abstract base with UUID/timestamps
+from .base import BaseModel  # -> your abstract base with UUID/timestamps
 
 if TYPE_CHECKING:
     from .saved_search import SavedSearch

@@ -1,7 +1,7 @@
 import json
 import logging
 from openai import OpenAI
-from app.config import settings
+from app.core import settings
 
 log = logging.getLogger("sb9.analyze")
 

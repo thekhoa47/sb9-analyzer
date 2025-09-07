@@ -7,7 +7,7 @@ from sqlalchemy import String, Integer, ForeignKey
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from .base_model import BaseModel
+from .base import BaseModel
 
 if TYPE_CHECKING:
     from .client import Client

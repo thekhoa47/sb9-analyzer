@@ -1,6 +1,6 @@
 from twilio.rest import Client as TwilioClient
 import requests
-from ..config import settings
+from app.core import settings
 
 twilio = TwilioClient(settings.TWILIO_SID, settings.TWILIO_TOKEN)
 

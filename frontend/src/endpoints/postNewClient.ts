@@ -5,7 +5,7 @@ import { NewClient } from '@/types/NewClient';
 const BACKEND_BASE_URL = configs.NEXT_PUBLIC_BACKEND_URL;
 
 export async function onboardNewClient(payload: FormValues): Promise<NewClient> {
-  const response = await fetch(`${BACKEND_BASE_URL}/onboard-new-client`, {
+  const response = await fetch(`${BACKEND_BASE_URL}/clients`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),

@@ -6,7 +6,7 @@ from sqlalchemy import String, Text, Enum, ForeignKey, DateTime
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.dialects.postgresql import UUID
 
-from .base_model import BaseModel
+from .base import BaseModel
 
 
 def utcnow() -> datetime:

@@ -7,7 +7,7 @@ import json
 import logging
 from fastapi import APIRouter, Request, HTTPException, Query
 from fastapi.responses import PlainTextResponse
-from app.config import settings
+from app.core import settings
 
 log = logging.getLogger("sb9.messenger")
 router = APIRouter(prefix="/webhooks/messenger", tags=["messenger"])

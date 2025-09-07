@@ -1,6 +1,6 @@
 import requests
 from typing import List, Dict
-from ..config import settings
+from app.core import settings
 
 
 def build_filter(

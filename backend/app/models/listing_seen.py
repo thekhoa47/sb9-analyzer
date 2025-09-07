@@ -8,7 +8,7 @@ from sqlalchemy import String, DateTime, UniqueConstraint, ForeignKey
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from .base_model import BaseModel
+from .base import BaseModel
 
 if TYPE_CHECKING:
     from .saved_search import SavedSearch

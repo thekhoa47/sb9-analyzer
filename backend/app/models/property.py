@@ -3,7 +3,7 @@ from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from geoalchemy2 import Geometry
 
-from .base_model import BaseModel
+from .base import BaseModel
 
 
 class Property(BaseModel):

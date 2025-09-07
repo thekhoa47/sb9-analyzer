@@ -1,4 +1,4 @@
-from .base import Base
+from .base import Base, BaseModel
 from .property import Property
 from .sb9_result import SB9Result
 from .client import Client
@@ -8,6 +8,7 @@ from .notification import Notification
 
 __all__ = [
     "Base",
+    "BaseModel",
     "Property",
     "SB9Result",
     "Client",

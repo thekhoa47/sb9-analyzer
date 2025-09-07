@@ -1,7 +1,7 @@
 # app/db.py
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, DeclarativeBase
-from app.config import settings
+from .config import settings
 
 
 # Declarative base for all models
@@ -32,7 +32,3 @@ def get_db():
         yield db
     finally:
         db.close()
-
-
-def get_engine():
-    return engine

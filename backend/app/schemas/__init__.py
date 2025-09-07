@@ -89,9 +89,6 @@ class ResultsPage(BaseModel):
     data: list[ResultWithProperty]
 
 
-from pydantic import BaseModel
-
-
 class ClientIn(BaseModel):
     name: str
     email: str | None = None

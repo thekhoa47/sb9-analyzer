@@ -1,7 +1,7 @@
 # app/jobs_lock.py
 from contextlib import contextmanager
 from sqlalchemy import text
-from app.db import SessionLocal
+from .core import SessionLocal
 
 LOCK_KEY = 0x5B9_0001  # arbitrary 64-bit int; keep stable
 
