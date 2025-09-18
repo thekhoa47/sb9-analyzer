@@ -1,5 +1,4 @@
 from pydantic import BaseModel
-from pathlib import Path
 import os
 from dotenv import load_dotenv
 
@@ -11,7 +10,6 @@ class Settings(BaseModel):
     PORT: int = int(os.getenv("PORT", "8000"))
     ENV: str = os.getenv("ENV", "dev")
 
-    MAPBOX_TOKEN: str = os.getenv("MAPBOX_TOKEN")
     APP_BASE_URL: str = os.getenv("APP_BASE_URL")
     DATABASE_URL: str = os.getenv("DATABASE_URL")
     DATABASE_URL_MIGRATIONS: str = os.getenv("DATABASE_URL_MIGRATIONS")
@@ -25,10 +23,6 @@ class Settings(BaseModel):
     R2_ENDPOINT_URL: str = os.getenv("R2_ENDPOINT_URL") or (
         f"https://{R2_ACCOUNT_ID}.r2.cloudflarestorage.com" if R2_ACCOUNT_ID else None
     )
-    SB9_MODEL_PATH: str = os.getenv("SB9_MODEL_PATH")
-    R2_MODEL_BUCKET: str = os.getenv("R2_MODEL_BUCKET")
-    R2_MODEL_KEY: str = os.getenv("R2_MODEL_KEY")
-    MODEL_CACHE_DIR: str = Path(os.getenv("MODEL_CACHE_DIR"))
 
     RESO_BASE_URL: str = os.getenv("RESO_BASE_URL")
     RESO_BEARER_TOKEN: str = os.getenv("RESO_BEARER_TOKEN")
@@ -44,15 +38,10 @@ class Settings(BaseModel):
     VERIFY_TOKEN: str = os.getenv("VERIFY_TOKEN")
     TEST_PSID: str | None = os.getenv("TEST_PSID")
 
-    ENABLE_SCHEDULER: bool = False
-    USE_GPT_FETCH: bool = True
-    TASK_KEY: str | None = None  # used by /tasks/poll auth
-    POLL_INTERVAL_MINUTES: int = int(os.getenv("POLL_INTERVAL_MINUTES"))
-    DEFAULT_CITY: str = os.getenv("DEFAULT_CITY")
-    DEFAULT_RADIUS_MILES: int = int(os.getenv("DEFAULT_RADIUS_MILES"))
-    DEFAULT_BEDS_MIN: int = int(os.getenv("DEFAULT_BEDS_MIN"))
-    DEFAULT_BATHS_MIN: int = int(os.getenv("DEFAULT_BATHS_MIN"))
-    DEFAULT_MAX_PRICE: int = int(os.getenv("DEFAULT_MAX_PRICE"))
+    EMAIL_FROM: str = os.getenv("EMAIL_FROM")
+    EMAIL_FROM_NAME: str = os.getenv("EMAIL_FROM_NAME")
+    GMAIL_USER: str = os.getenv("GMAIL_USER")
+    GMAIL_PASS: str = os.getenv("GMAIL_PASS")
 
 
 settings = Settings()
