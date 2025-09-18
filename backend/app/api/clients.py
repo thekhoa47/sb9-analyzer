@@ -92,23 +92,6 @@ def onboard_new_client(payload: OnboardNewClientIn, db: Session = Depends(get_db
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@router.get("/{client_id}", response_model=ClientOut)
-def get_client(client_id: int, db: Session = Depends(get_db)):
-    c = db.get(Client, client_id)
-    if not c:
-        raise HTTPException(404)
-    return ClientOut(
-        id=c.id,
-        name=c.name,
-        email=c.email,
-        phone=c.phone,
-        messenger_psid=c.messenger_psid,
-        sms_opt_in=c.sms_opt_in,
-        email_opt_in=c.email_opt_in,
-        messenger_opt_in=c.messenger_opt_in,
-    )
-
-
 @router.get("/", response_model=Page[ClientsWithSearchesOut])
 def list_clients(
     request: Request,
@@ -145,3 +128,20 @@ def list_clients(
         stmt = stmt.where(or_(*ors))
 
     return paginate(db, stmt, params)
+
+
+@router.get("/{client_id}", response_model=ClientOut)
+def get_client(client_id: int, db: Session = Depends(get_db)):
+    c = db.get(Client, client_id)
+    if not c:
+        raise HTTPException(404)
+    return ClientOut(
+        id=c.id,
+        name=c.name,
+        email=c.email,
+        phone=c.phone,
+        messenger_psid=c.messenger_psid,
+        sms_opt_in=c.sms_opt_in,
+        email_opt_in=c.email_opt_in,
+        messenger_opt_in=c.messenger_opt_in,
+    )

@@ -14,6 +14,7 @@ class Settings(BaseModel):
     MAPBOX_TOKEN: str = os.getenv("MAPBOX_TOKEN")
     APP_BASE_URL: str = os.getenv("APP_BASE_URL")
     DATABASE_URL: str = os.getenv("DATABASE_URL")
+    DATABASE_URL_MIGRATIONS: str = os.getenv("DATABASE_URL_MIGRATIONS")
 
     R2_ACCOUNT_ID: str = os.getenv("R2_ACCOUNT_ID")
     R2_ACCESS_KEY_ID: str = os.getenv("R2_ACCESS_KEY_ID")

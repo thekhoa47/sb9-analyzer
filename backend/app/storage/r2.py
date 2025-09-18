@@ -22,7 +22,7 @@ _s3 = boto3.client(
 
 
 def upload_bytes_and_get_url(
-    key: str, data: bytes, content_type: str = "image/png"
+    key: str, data: bytes, content_type: str = "image/svg+xml"
 ) -> str:
     _s3.put_object(Bucket=R2_BUCKET, Key=key, Body=data, ContentType=content_type)
     return f"{R2_PUBLIC_BASE}/{key}"

@@ -1,48 +1,68 @@
-from sqlalchemy import Column, Integer, Text, CheckConstraint, CHAR, Index
-from sqlalchemy.orm import relationship
-from sqlalchemy.sql import func
-from geoalchemy2 import Geometry
+from __future__ import annotations
 from .base import BaseModel
+from sqlalchemy.orm import relationship, Mapped, mapped_column
+from sqlalchemy import Index, String, Float, Integer
+from typing import Optional, TYPE_CHECKING
+from geoalchemy2 import Geometry
+from geoalchemy2.types import WKBElement
+
+
+if TYPE_CHECKING:
+    from .listing import Listing
+    from .property_analysis import PropertyAnalysis
 
 
 class Property(BaseModel):
     __tablename__ = "properties"
 
-    address = Column(Text, nullable=False)
-    city = Column(Text)
-    state = Column(CHAR(2), CheckConstraint("state ~ '^[A-Z]{2}$'"))
-    zip = Column(CHAR(5), CheckConstraint("zip ~ '^[0-9]{5}$'"))
+    address_line1: Mapped[str] = mapped_column(String, nullable=False)
+    address_line2: Mapped[Optional[str]] = mapped_column(String)
+    city: Mapped[str] = mapped_column(String, nullable=False)
+    state: Mapped[str] = mapped_column(String, nullable=False)
+    zip: Mapped[str] = mapped_column(String, nullable=False)
+    bedrooms: Mapped[Optional[int]] = mapped_column(Integer)
+    bathrooms: Mapped[Optional[float]] = mapped_column(Float)
+    year_built: Mapped[Optional[int]] = mapped_column(Integer)
+    house_geometry: Mapped[Optional[WKBElement]] = mapped_column(
+        Geometry("POLYGON", srid=2230)
+    )
+    lot_geometry: Mapped[Optional[WKBElement]] = mapped_column(
+        Geometry("POLYGON", srid=2230)
+    )
 
-    parcel_geom = Column(Geometry("POLYGON", srid=4326))
-    parcel_centroid = Column(Geometry("POINT", srid=4326))
-
-    beds = Column(Integer)
-    baths = Column(
-        Integer, CheckConstraint("baths >= 0")
-    )  # replace with Numeric(3,1) if you want exact match
-    year_built = Column(Integer, CheckConstraint("year_built BETWEEN 1800 AND 2100"))
-    living_area = Column(Integer, CheckConstraint("living_area >= 0"))
-    lot_area = Column(Integer, CheckConstraint("lot_area >= 0"))
-
-    image_url = Column(Text)
-
-    # one-to-one relationship with SB9Result
-    result = relationship(
-        "SB9Result",
+    listings: Mapped[Optional[Listing]] = relationship(
+        "Listing",
         back_populates="property",
         uselist=False,
         cascade="all, delete-orphan",
-        passive_deletes=True,
+        single_parent=True,
+    )
+    analysis: Mapped[Optional[PropertyAnalysis]] = relationship(
+        "PropertyAnalysis",
+        back_populates="property",
+        uselist=False,
+        cascade="all, delete-orphan",
+        single_parent=True,
     )
 
-
-Index(
-    "ux_properties_addr",
-    func.lower(Property.address),
-    func.lower(Property.city),
-    func.lower(Property.state),
-    Property.zip,
-    unique=True,
-)
-Index("idx_properties_centroid", Property.parcel_centroid, postgresql_using="gist")
-Index("idx_properties_geom", Property.parcel_geom, postgresql_using="gist")
+    __table_args__ = (
+        Index(
+            "unique_property_without_address2",
+            "address_line1",
+            "city",
+            "state",
+            "zip",
+            unique=True,
+            postgresql_where="address_line2 IS NULL",
+        ),
+        Index(
+            "unique_property_with_address2",
+            "address_line1",
+            "address_line2",
+            "city",
+            "state",
+            "zip",
+            unique=True,
+            postgresql_where="address_line2 IS NOT NULL",
+        ),
+    )

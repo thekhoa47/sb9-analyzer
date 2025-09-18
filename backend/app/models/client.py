@@ -1,36 +1,32 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import Optional, TYPE_CHECKING, List
 
-from sqlalchemy import String, Boolean, CheckConstraint
+from sqlalchemy import String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .base import BaseModel  # -> your abstract base with UUID/timestamps
 
 if TYPE_CHECKING:
     from .saved_search import SavedSearch
+    from .sent_notification import SentNotification
+    from .client_notification_preference import ClientNotificationPreference
 
 
 class Client(BaseModel):
     __tablename__ = "clients"
 
     name: Mapped[str] = mapped_column(String(120), nullable=False)
-    email: Mapped[str | None] = mapped_column(String(255))
-    phone: Mapped[str | None] = mapped_column(String(32))
-    messenger_psid: Mapped[str | None] = mapped_column(String(64))
+    email: Mapped[Optional[str]] = mapped_column(String(255))
+    phone: Mapped[Optional[str]] = mapped_column(String(32))
+    address: Mapped[Optional[str]] = mapped_column(String)
 
-    sms_opt_in: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
-    email_opt_in: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
-    messenger_opt_in: Mapped[bool] = mapped_column(
-        Boolean, default=False, nullable=False
+    saved_searches: Mapped[List[SavedSearch]] = relationship(
+        "SavedSearch", back_populates="client", cascade="all, delete-orphan"
     )
-
-    __table_args__ = (CheckConstraint("name <> ''", name="ck_clients_name_not_empty"),)
-
-    # One-to-many: Client -> SavedSearch
-    searches: Mapped[list[SavedSearch]] = relationship(
-        "SavedSearch",
-        back_populates="client",
-        cascade="all, delete-orphan",
-        lazy="selectin",
+    notification_preferences: Mapped[List[ClientNotificationPreference]] = relationship(
+        back_populates="client", cascade="all, delete-orphan"
+    )
+    sent_notifications: Mapped[List[SentNotification]] = relationship(
+        back_populates="client", cascade="all, delete-orphan"
     )

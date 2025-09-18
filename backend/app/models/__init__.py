@@ -1,18 +1,29 @@
-from .base import Base, BaseModel
+# models/__init__.py
+from .base import BaseModel
+
+# Import model modules so mappers register
 from .property import Property
-from .sb9_result import SB9Result
+from .property_analysis import PropertyAnalysis
+from .listing import Listing
 from .client import Client
 from .saved_search import SavedSearch
-from .listing_seen import ListingSeen
-from .notification import Notification
+from .search_listing_analysis import SearchListingAnalysis
+from .saved_search_field import SavedSearchField
+from .saved_search_match import SavedSearchMatch
+from .client_notification_preference import ClientNotificationPreference
+from .sent_notification import SentNotification
 
 __all__ = [
     "Base",
     "BaseModel",
     "Property",
-    "SB9Result",
+    "PropertyAnalysis",
+    "Listing",
     "Client",
     "SavedSearch",
-    "ListingSeen",
-    "Notification",
+    "SearchListingAnalysis",
+    "SavedSearchField",
+    "SavedSearchMatch",
+    "ClientNotificationPreference",
+    "SentNotification",
 ]

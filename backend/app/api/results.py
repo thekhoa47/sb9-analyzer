@@ -5,7 +5,7 @@ from sqlalchemy import or_, select
 from fastapi_pagination import Page, Params
 from fastapi_pagination.ext.sqlalchemy import paginate
 from app.core import get_db
-from app.models import SB9Result, Property
+from app.models import PropertyAnalysis, Property
 from app.schemas import ResultWithProperty
 from app.utils.parse_filters import parse_filters
 from app.utils.geo_norm import normalize_state
@@ -29,9 +29,9 @@ def list_results(
 ):
     # Base selectable (1:1 join + eager load)
     stmt = (
-        select(SB9Result)
-        .join(SB9Result.property)
-        .options(selectinload(SB9Result.property))
+        select(PropertyAnalysis)
+        .join(PropertyAnalysis.property)
+        .options(selectinload(PropertyAnalysis.property))
     )
 
     # Filters
@@ -40,7 +40,7 @@ def list_results(
         "city": Property.city,
         "state": Property.state,
         "zip": Property.zip,
-        "label": SB9Result.predicted_label,
+        "label": PropertyAnalysis.predicted_label,
     }
     for field, op, value in filters:
         col = colmap[field]
@@ -81,7 +81,7 @@ def list_results(
         "city": Property.city,
         "state": Property.state,
         "zip": Property.zip,
-        "label": SB9Result.predicted_label,
+        "label": PropertyAnalysis.predicted_label,
     }
     order_cols = []
     for item in sort_by:
