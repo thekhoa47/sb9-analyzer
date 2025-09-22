@@ -3,14 +3,13 @@ import os
 from dotenv import load_dotenv
 
 
-load_dotenv()
+load_dotenv(override=False)
 
 
 class Settings(BaseModel):
     PORT: int = int(os.getenv("PORT", "8000"))
     ENV: str = os.getenv("ENV", "dev")
 
-    APP_BASE_URL: str = os.getenv("APP_BASE_URL")
     DATABASE_URL: str = os.getenv("DATABASE_URL")
     DATABASE_URL_MIGRATIONS: str = os.getenv("DATABASE_URL_MIGRATIONS")
 
