@@ -17,7 +17,7 @@ RUN --mount=type=cache,target=/root/.cache/pip \
     pip install --upgrade pip && pip install --prefer-binary -r /app/requirements.txt
 
 # code (copies backend/* into /app, so your package is at /app/app)
-COPY . /app/
+COPY app/ /app/
 
 # bind to $PORT at runtime (fallback 8080 locally)
 CMD ["sh","-c","exec gunicorn -k uvicorn.workers.UvicornWorker --chdir /app --bind 0.0.0.0:${PORT:-8080} --workers 1 app.main:app"]

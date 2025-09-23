@@ -1,9 +1,15 @@
-.git
+# keep your app/ — don't list it here!
 __pycache__/
-*.pyc
-*.pyo
-*.pyd
+*.py[cod]
+*.log
+*.egg-info
 .venv/
+venv/
 .env
 .env.*
-*.log
+.git
+.gitignore
+node_modules/
+dist/
+build/
+.cache/

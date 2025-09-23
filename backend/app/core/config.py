@@ -10,6 +10,7 @@ class Settings(BaseModel):
     PORT: int = int(os.getenv("PORT", "8000"))
     ENV: str = os.getenv("ENV", "dev")
 
+    BASE_URL: str = os.getenv("BASE_URL", "http://localhost:8000")
     DATABASE_URL: str = os.getenv("DATABASE_URL")
     DATABASE_URL_MIGRATIONS: str = os.getenv("DATABASE_URL_MIGRATIONS")
 
