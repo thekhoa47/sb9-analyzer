@@ -3,7 +3,9 @@ import os
 from dotenv import load_dotenv
 
 
-load_dotenv(override=False)
+# In Cloud Run, GOOGLE_CLOUD_PROJECT is set; skip load_dotenv there.
+if not os.getenv("GOOGLE_CLOUD_PROJECT"):
+    load_dotenv()
 
 
 class Settings(BaseModel):

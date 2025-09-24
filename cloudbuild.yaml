@@ -1,0 +1,46 @@
+substitutions:
+  _REGION: us-west1
+  _REPO: real-estate-backend
+  _SERVICE: real-estate-backend
+  _IMAGE_NAME: real-estate-backend
+
+steps:
+  - name: 'gcr.io/cloud-builders/docker'
+    id: Build image
+    args:
+      [
+        'build',
+        '-t',
+        'us-west1-docker.pkg.dev/$PROJECT_ID/${_REPO}/${_IMAGE_NAME}:$SHORT_SHA',
+        '-f',
+        'backend/Dockerfile',
+        'backend'
+      ]
+
+  - name: 'gcr.io/cloud-builders/docker'
+    id: Push image
+    args:
+      [
+        'push',
+        'us-west1-docker.pkg.dev/$PROJECT_ID/${_REPO}/${_IMAGE_NAME}:$SHORT_SHA'
+      ]
+
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    id: Deploy to Cloud Run
+    entrypoint: gcloud
+    args:
+      [
+        'run', 'deploy', '${_SERVICE}',
+        '--image', 'us-west1-docker.pkg.dev/$PROJECT_ID/${_REPO}/${_IMAGE_NAME}:$SHORT_SHA',
+        '--region', '${_REGION}',
+        '--platform', 'managed',
+        '--allow-unauthenticated',
+        '--service-account', 'real-estate-backend-sa@$PROJECT_ID.iam.gserviceaccount.com',
+        '--set-secrets', 'DOTENV=real-estate-backend-env:latest',
+        '--port', '8080',
+        '--memory', '1Gi',
+        '--cpu', '1'
+      ]
+
+images:
+  - 'us-west1-docker.pkg.dev/$PROJECT_ID/${_REPO}/${_IMAGE_NAME}:$SHORT_SHA'
