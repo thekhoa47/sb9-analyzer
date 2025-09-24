@@ -20,6 +20,20 @@ steps:
         echo "_SERVICE=${_SERVICE}"
         echo "_IMAGE_NAME=${_IMAGE_NAME}"
 
+  # Preflight step
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    id: Preflight list
+    entrypoint: bash
+    args:
+      - -lc
+      - |
+        echo "PWD=$(pwd)"
+        ls -la
+        echo "---- backend ----"
+        ls -la backend
+        echo "---- show Dockerfile head ----"
+        sed -n '1,120p' backend/Dockerfile
+
   # Build
   - name: 'gcr.io/cloud-builders/docker'
     id: Build image

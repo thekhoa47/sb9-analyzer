@@ -15,10 +15,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends curl \
 
 # deps
 COPY requirements.txt /app/requirements.txt
-# BuildKit cache speeds up builds (safe to keep; if it’s ignored, still fine)
-RUN --mount=type=cache,target=/root/.cache/pip \
-    pip install --upgrade pip && \
-    pip install --prefer-binary -r /app/requirements.txt gunicorn uvicorn
+RUN pip install --upgrade pip && \
+    pip install --prefer-binary -r /app/requirements.txt
 
 # code
 COPY app /app
