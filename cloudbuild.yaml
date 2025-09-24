@@ -1,10 +1,26 @@
+# cloudbuild.yaml (repo root)
 substitutions:
   _REGION: us-west1
-  _REPO: real-estate-backend
-  _SERVICE: real-estate-backend
-  _IMAGE_NAME: real-estate-backend
+  _REPO: real-estate-backend          # Artifact Registry repo name (must exist in us-west1)
+  _SERVICE: real-estate-backend       # Cloud Run service name
+  _IMAGE_NAME: real-estate-backend    # Image name inside the repo
 
 steps:
+  # (Optional) Print resolved vars so you can see them in logs
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    id: Print vars
+    entrypoint: bash
+    args:
+      - -lc
+      - |
+        echo "PROJECT_ID=$PROJECT_ID"
+        echo "SHORT_SHA=$SHORT_SHA"
+        echo "_REGION=${_REGION}"
+        echo "_REPO=${_REPO}"
+        echo "_SERVICE=${_SERVICE}"
+        echo "_IMAGE_NAME=${_IMAGE_NAME}"
+
+  # Build
   - name: 'gcr.io/cloud-builders/docker'
     id: Build image
     args:
@@ -12,11 +28,11 @@ steps:
         'build',
         '-t',
         'us-west1-docker.pkg.dev/$PROJECT_ID/${_REPO}/${_IMAGE_NAME}:$SHORT_SHA',
-        '-f',
-        'backend/Dockerfile',
+        '-f', 'backend/Dockerfile',
         'backend'
       ]
 
+  # Push
   - name: 'gcr.io/cloud-builders/docker'
     id: Push image
     args:
@@ -25,21 +41,35 @@ steps:
         'us-west1-docker.pkg.dev/$PROJECT_ID/${_REPO}/${_IMAGE_NAME}:$SHORT_SHA'
       ]
 
+  # (Optional) sanity checks before deploy
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    id: Sanity checks
+    entrypoint: bash
+    args:
+      - -lc
+      - |
+        gcloud artifacts repositories describe ${_REPO} --location ${_REGION}
+        gcloud secrets describe real-estate-backend-env --format='value(name)'
+
+  # Deploy (explicit scale-to-zero)
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     id: Deploy to Cloud Run
     entrypoint: gcloud
     args:
       [
-        'run', 'deploy', '${_SERVICE}',
-        '--image', 'us-west1-docker.pkg.dev/$PROJECT_ID/${_REPO}/${_IMAGE_NAME}:$SHORT_SHA',
-        '--region', '${_REGION}',
-        '--platform', 'managed',
+        'run','deploy','${_SERVICE}',
+        '--image','us-west1-docker.pkg.dev/$PROJECT_ID/${_REPO}/${_IMAGE_NAME}:$SHORT_SHA',
+        '--region','${_REGION}',
+        '--platform','managed',
         '--allow-unauthenticated',
-        '--service-account', 'real-estate-backend-sa@$PROJECT_ID.iam.gserviceaccount.com',
-        '--set-secrets', 'DOTENV=real-estate-backend-env:latest',
-        '--port', '8080',
-        '--memory', '1Gi',
-        '--cpu', '1'
+        '--service-account','real-estate-backend-sa@$PROJECT_ID.iam.gserviceaccount.com',
+        '--set-secrets','DOTENV=real-estate-backend-env:latest',
+        '--port','8080',
+        '--memory','1Gi',
+        '--cpu','1',
+        '--min-instances','0',           # <— explicit scale to zero
+        '--max-instances','10',          # tune as you like
+        '--concurrency','80'             # tune as you like
       ]
 
 images:

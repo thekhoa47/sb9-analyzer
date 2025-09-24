@@ -21,7 +21,7 @@ RUN --mount=type=cache,target=/root/.cache/pip \
     pip install --prefer-binary -r /app/requirements.txt gunicorn uvicorn
 
 # code
-COPY app/ ./app
+COPY app /app
 
 # non-root
 RUN useradd -m appuser && chown -R appuser:appuser /app
