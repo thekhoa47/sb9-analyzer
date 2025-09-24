@@ -1,46 +1,35 @@
-# syntax=docker/dockerfile:1
+# backend/Dockerfile
 FROM python:3.12-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \
-    POETRY_VIRTUALENVS_CREATE=false \
-    PATH="/usr/local/bin:$PATH"
+    PYTHONPATH=/app \
+    PORT=8080
 
-# Create user & workdir
-RUN useradd -m appuser
 WORKDIR /app
 
-# System deps (psycopg2, geospatial libs if needed; add as necessary)
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential gcc \
-    libpq-dev \
-    curl \
-    && rm -rf /var/lib/apt/lists/*
+# minimal OS deps (curl only if you truly need it)
+RUN apt-get update && apt-get install -y --no-install-recommends curl \
+ && rm -rf /var/lib/apt/lists/*
 
-# Copy requirements first for layer caching
-COPY requirements.txt .
+# deps
+COPY requirements.txt /app/requirements.txt
+# BuildKit cache speeds up builds (safe to keep; if it’s ignored, still fine)
+RUN --mount=type=cache,target=/root/.cache/pip \
+    pip install --upgrade pip && \
+    pip install --prefer-binary -r /app/requirements.txt gunicorn uvicorn
 
-# Install deps (force-install gunicorn/uvicorn if missing)
-RUN pip install --upgrade pip && \
-    pip install -r requirements.txt gunicorn uvicorn
+# code
+COPY app/ ./app
 
-# Copy app code
-COPY app ./app
-COPY alembic ./alembic
-COPY entrypoint.sh ./entrypoint.sh
-RUN chmod +x ./entrypoint.sh
+# non-root
+RUN useradd -m appuser && chown -R appuser:appuser /app
 
-# Cloud Run sets $PORT; default to 8080 if not provided
-ENV PORT=8080
-
-# Run as non-root
+# entrypoint to expand DOTENV (Secret Manager) into env vars
+COPY entrypoint.sh /app/entrypoint.sh
+RUN chmod +x /app/entrypoint.sh
 USER appuser
 
-# Health: if you have /health, Cloud Run can probe it
-# EXPOSE is not required by Cloud Run, but harmless
-EXPOSE 8080
-
-# Entrypoint: loads DOTENV secret, then execs gunicorn
-ENTRYPOINT ["./entrypoint.sh"]
-CMD ["gunicorn", "-k", "uvicorn.workers.UvicornWorker", "--bind", "0.0.0.0:${PORT}", "--workers", "1", "app.main:app"]
+ENTRYPOINT ["/app/entrypoint.sh"]
+CMD ["sh","-c","exec gunicorn -k uvicorn.workers.UvicornWorker --chdir /app --bind 0.0.0.0:${PORT:-8080} --workers 1 app.main:app"]

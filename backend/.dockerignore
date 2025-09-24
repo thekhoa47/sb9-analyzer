@@ -1,7 +1,8 @@
 .env
 **/__pycache__/
 **/*.pyc
-.alembic*
 .git
 .gitignore
+tests/
 frontend/
+alembic/*
