@@ -14,7 +14,7 @@ from app.utils.geo_norm import normalize_state
 router = APIRouter(prefix="/results", tags=["results"])
 
 
-ALLOWED_SORT = {"address", "city", "state", "zip", "label"}
+ALLOWED_SORT = {"address_line1", "city", "state", "zip"}
 
 
 @router.get("", response_model=Page[ResultWithProperty])
@@ -40,7 +40,6 @@ def list_results(
         "city": Property.city,
         "state": Property.state,
         "zip": Property.zip,
-        "label": PropertyAnalysis.predicted_label,
     }
     for field, op, value in filters:
         col = colmap[field]
@@ -67,7 +66,7 @@ def list_results(
         like = f"%{needle}%"
         maybe_abbr = normalize_state(needle)
         ors = [
-            Property.address.ilike(like),
+            Property.address_line1.ilike(like),
             Property.city.ilike(like),
             Property.state.ilike(like),
         ]
@@ -77,12 +76,12 @@ def list_results(
 
     # Multi-sort parsing
     sort_map = {
-        "address": Property.address,
+        "address_line1": Property.address_line1,
         "city": Property.city,
         "state": Property.state,
         "zip": Property.zip,
-        "label": PropertyAnalysis.predicted_label,
     }
+
     order_cols = []
     for item in sort_by:
         field, _, dirpart = item.partition(":")
@@ -96,6 +95,6 @@ def list_results(
     if order_cols:
         stmt = stmt.order_by(*order_cols)
     else:
-        stmt = stmt.order_by(Property.address.asc())  # default
+        stmt = stmt.order_by(Property.address_line1.asc())  # default
 
     return paginate(db, stmt, params)

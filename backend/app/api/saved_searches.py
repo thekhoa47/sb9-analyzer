@@ -14,9 +14,7 @@ def create_saved_search(payload: SavedSearchIn, db: Session = Depends(get_db)):
     db.add(s)
     db.commit()
     db.refresh(s)
-    return SavedSearchOut(
-        **{**payload.model_dump(), "id": s.id, "cursor_iso": s.cursor_iso}
-    )
+    return SavedSearchOut(**{**payload.model_dump(), "id": s.id})
 
 
 @router.get("/saved-searches/{search_id}", response_model=SavedSearchOut)
@@ -27,11 +25,11 @@ def get_saved_search(search_id: int, db: Session = Depends(get_db)):
     return SavedSearchOut(
         id=s.id,
         name=s.name,
-        city=s.city,
-        radius_miles=s.radius_miles,
+        # city=s.city,
+        # radius_miles=s.radius_miles,
         beds_min=s.beds_min,
         baths_min=s.baths_min,
         max_price=s.max_price,
         client_id=s.client_id,
-        cursor_iso=s.cursor_iso,
+        # cursor_iso=s.cursor_iso,
     )

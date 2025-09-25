@@ -13,7 +13,6 @@ from sqlalchemy import select, or_
 from sqlalchemy.orm import selectinload
 from fastapi_pagination import Page, Params
 from fastapi_pagination.ext.sqlalchemy import paginate
-from app.utils.parse_filters import parse_filters
 from typing import Optional
 
 
@@ -30,10 +29,7 @@ def onboard_new_client(payload: OnboardNewClientIn, db: Session = Depends(get_db
                 name=payload.name,
                 email=payload.email,
                 phone=payload.phone,
-                messenger_psid=payload.messenger_psid,
-                email_opt_in=bool(payload.email_opt_in),
-                sms_opt_in=bool(payload.sms_opt_in),
-                messenger_opt_in=bool(payload.messenger_opt_in),
+                # address=payload.address,
             )
             db.add(client)
             db.flush()  # assign client.id
@@ -45,7 +41,6 @@ def onboard_new_client(payload: OnboardNewClientIn, db: Session = Depends(get_db
                     client_id=client.id,
                     name=item.name,
                     city=item.city,
-                    radius_miles=item.radius_miles,
                     beds_min=item.beds_min,
                     baths_min=item.baths_min,
                     max_price=item.max_price,
@@ -59,12 +54,9 @@ def onboard_new_client(payload: OnboardNewClientIn, db: Session = Depends(get_db
                         id=str(s.id),
                         client_id=str(s.client_id),
                         name=s.name,
-                        city=s.city,
-                        radius_miles=s.radius_miles,
                         beds_min=s.beds_min,
                         baths_min=s.baths_min,
                         max_price=s.max_price,
-                        cursor_iso=s.cursor_iso,
                         created_at=s.created_at.isoformat(),
                         updated_at=s.updated_at.isoformat() if s.updated_at else None,
                     )
@@ -76,10 +68,7 @@ def onboard_new_client(payload: OnboardNewClientIn, db: Session = Depends(get_db
             name=client.name,
             email=client.email,
             phone=client.phone,
-            messenger_psid=client.messenger_psid,
-            email_opt_in=client.email_opt_in,
-            sms_opt_in=client.sms_opt_in,
-            messenger_opt_in=client.messenger_opt_in,
+            # address=client.address,
             created_at=client.created_at.isoformat(),
             updated_at=client.updated_at.isoformat() if client.updated_at else None,
         )
@@ -102,18 +91,22 @@ def list_clients(
     ),  # free text over name/email/phone/messenger_psid
 ):
     # Base selectable (1:1 join + eager load)
-    stmt = select(Client).join(Client.searches).options(selectinload(Client.searches))
+    stmt = (
+        select(Client)
+        .join(Client.saved_searches)
+        .options(selectinload(Client.saved_searches))
+    )
 
-    # Filters
-    filters = parse_filters(request.query_params)
-    colmap = {
-        "sms_opt_in": Client.sms_opt_in,
-        "email_opt_in": Client.email_opt_in,
-        "messenger_opt_in": Client.messenger_opt_in,
-    }
-    for field, value in filters:
-        col = colmap[field]
-        stmt = stmt.where(col == value)
+    # # Filters
+    # filters = parse_filters(request.query_params)
+    # colmap = {
+    #     "sms_opt_in": Client.sms_opt_in,
+    #     "email_opt_in": Client.email_opt_in,
+    #     "messenger_opt_in": Client.messenger_opt_in,
+    # }
+    # for field, value in filters:
+    #     col = colmap[field]
+    #     stmt = stmt.where(col == value)
 
     # Search over address/city/state (+ “California” -> CA)
     if search:
@@ -123,7 +116,6 @@ def list_clients(
             Client.name.ilike(like),
             Client.email.ilike(like),
             Client.phone.ilike(like),
-            Client.messenger_psid.ilike(like),
         ]
         stmt = stmt.where(or_(*ors))
 
@@ -140,8 +132,5 @@ def get_client(client_id: int, db: Session = Depends(get_db)):
         name=c.name,
         email=c.email,
         phone=c.phone,
-        messenger_psid=c.messenger_psid,
-        sms_opt_in=c.sms_opt_in,
-        email_opt_in=c.email_opt_in,
-        messenger_opt_in=c.messenger_opt_in,
+        # address=c.address,
     )
