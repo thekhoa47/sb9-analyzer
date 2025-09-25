@@ -28,7 +28,7 @@ steps:
       [
         'build',
         '-t',
-        'us-west1-docker.pkg.dev/$PROJECT_ID/${_REPO}/${_IMAGE_NAME}:${SHORT_SHA}',
+        'us-west1-docker.pkg.dev/$PROJECT_ID/${_REPO}/${_IMAGE_NAME}:$SHORT_SHA',
         '.',
       ]
 
@@ -38,7 +38,7 @@ steps:
     args:
       [
         'push',
-        'us-west1-docker.pkg.dev/$PROJECT_ID/${_REPO}/${_IMAGE_NAME}:${SHORT_SHA}'
+        'us-west1-docker.pkg.dev/$PROJECT_ID/${_REPO}/${_IMAGE_NAME}:$SHORT_SHA'
       ]
 
   # (Optional) sanity checks before deploy
@@ -58,7 +58,7 @@ steps:
     args:
       [
         'run','deploy','${_SERVICE}',
-        '--image','us-west1-docker.pkg.dev/$PROJECT_ID/${_REPO}/${_IMAGE_NAME}:${SHORT_SHA}',
+        '--image','us-west1-docker.pkg.dev/$PROJECT_ID/${_REPO}/${_IMAGE_NAME}:$SHORT_SHA',
         '--region','${_REGION}',
         '--platform','managed',
         '--allow-unauthenticated',
