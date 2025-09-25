@@ -20,30 +20,16 @@ steps:
         echo "_SERVICE=${_SERVICE}"
         echo "_IMAGE_NAME=${_IMAGE_NAME}"
 
-  # Preflight step
-  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
-    id: Preflight list
-    entrypoint: bash
-    args:
-      - -lc
-      - |
-        echo "PWD=$(pwd)"
-        ls -la
-        echo "---- backend ----"
-        ls -la backend
-        echo "---- show Dockerfile head ----"
-        sed -n '1,120p' backend/Dockerfile
-
   # Build
   - name: 'gcr.io/cloud-builders/docker'
     id: Build image
+    dir: backend
     args:
       [
         'build',
         '-t',
-        'us-west1-docker.pkg.dev/$PROJECT_ID/${_REPO}/${_IMAGE_NAME}:$SHORT_SHA',
-        '-f', 'backend/Dockerfile',
-        'backend'
+        'us-west1-docker.pkg.dev/$PROJECT_ID/${_REPO}/${_IMAGE_NAME}:${SHORT_SHA}',
+        '.',
       ]
 
   # Push
@@ -52,7 +38,7 @@ steps:
     args:
       [
         'push',
-        'us-west1-docker.pkg.dev/$PROJECT_ID/${_REPO}/${_IMAGE_NAME}:$SHORT_SHA'
+        'us-west1-docker.pkg.dev/$PROJECT_ID/${_REPO}/${_IMAGE_NAME}:${SHORT_SHA}'
       ]
 
   # (Optional) sanity checks before deploy
@@ -72,12 +58,12 @@ steps:
     args:
       [
         'run','deploy','${_SERVICE}',
-        '--image','us-west1-docker.pkg.dev/$PROJECT_ID/${_REPO}/${_IMAGE_NAME}:$SHORT_SHA',
+        '--image','us-west1-docker.pkg.dev/$PROJECT_ID/${_REPO}/${_IMAGE_NAME}:${SHORT_SHA}',
         '--region','${_REGION}',
         '--platform','managed',
         '--allow-unauthenticated',
         '--service-account','real-estate-backend-sa@$PROJECT_ID.iam.gserviceaccount.com',
-        '--set-secrets','DOTENV=real-estate-backend-env:latest',
+        '--update-secrets=/tmp/runtime.env=real-estate-backend-env:latest',
         '--port','8080',
         '--memory','1Gi',
         '--cpu','1',
@@ -85,9 +71,6 @@ steps:
         '--max-instances','10',          # tune as you like
         '--concurrency','80'             # tune as you like
       ]
-
-images:
-  - 'us-west1-docker.pkg.dev/$PROJECT_ID/${_REPO}/${_IMAGE_NAME}:$SHORT_SHA'
 
 options:
   logging: CLOUD_LOGGING_ONLY
