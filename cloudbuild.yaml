@@ -1,25 +1,11 @@
 # cloudbuild.yaml (repo root)
 substitutions:
   _REGION: us-west1
-  _REPO: real-estate-backend          # Artifact Registry repo name (must exist in us-west1)
+  _REPO: real-estate-backend          
   _SERVICE: real-estate-backend       # Cloud Run service name
   _IMAGE_NAME: real-estate-backend    # Image name inside the repo
 
 steps:
-  # (Optional) Print resolved vars so you can see them in logs
-  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
-    id: Print vars
-    entrypoint: bash
-    args:
-      - -lc
-      - |
-        echo "PROJECT_ID=$PROJECT_ID"
-        echo "SHORT_SHA=$SHORT_SHA"
-        echo "_REGION=${_REGION}"
-        echo "_REPO=${_REPO}"
-        echo "_SERVICE=${_SERVICE}"
-        echo "_IMAGE_NAME=${_IMAGE_NAME}"
-
   # Build
   - name: 'gcr.io/cloud-builders/docker'
     id: Build image
@@ -40,16 +26,6 @@ steps:
         'push',
         'us-west1-docker.pkg.dev/$PROJECT_ID/${_REPO}/${_IMAGE_NAME}:$SHORT_SHA'
       ]
-
-  # (Optional) sanity checks before deploy
-  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
-    id: Sanity checks
-    entrypoint: bash
-    args:
-      - -lc
-      - |
-        gcloud artifacts repositories describe ${_REPO} --location ${_REGION}
-        gcloud secrets describe real-estate-backend-env --format='value(name)'
 
   # Deploy (explicit scale-to-zero)
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
