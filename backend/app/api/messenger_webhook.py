@@ -16,7 +16,7 @@ router = APIRouter(prefix="/webhooks/messenger", tags=["messenger"])
 
 
 @router.get("", response_class=PlainTextResponse)
-@router.get("/", response_class=PlainTextResponse)  # handle trailing slash too
+@router.get("", response_class=PlainTextResponse)  # handle trailing slash too
 async def verify(
     hub_mode: str = Query(..., alias="hub.mode"),
     hub_challenge: str = Query(..., alias="hub.challenge"),
@@ -44,7 +44,7 @@ def _verify_signature(request: Request, body: bytes):
 
 
 @router.post("")
-@router.post("/")
+@router.post("")
 async def receive(request: Request):
     body = await request.body()
     _verify_signature(request, body)

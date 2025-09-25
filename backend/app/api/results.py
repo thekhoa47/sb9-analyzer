@@ -17,7 +17,7 @@ router = APIRouter(prefix="/results", tags=["results"])
 ALLOWED_SORT = {"address", "city", "state", "zip", "label"}
 
 
-@router.get("/", response_model=Page[ResultWithProperty])
+@router.get("", response_model=Page[ResultWithProperty])
 def list_results(
     request: Request,
     db: Session = Depends(get_db),

@@ -20,7 +20,7 @@ from typing import Optional
 router = APIRouter(prefix="/clients", tags=["clients"])
 
 
-@router.post("/", response_model=OnboardNewClientOut, status_code=201)
+@router.post("", response_model=OnboardNewClientOut, status_code=201)
 def onboard_new_client(payload: OnboardNewClientIn, db: Session = Depends(get_db)):
     try:
         # Start a single transaction
@@ -92,7 +92,7 @@ def onboard_new_client(payload: OnboardNewClientIn, db: Session = Depends(get_db
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@router.get("/", response_model=Page[ClientsWithSearchesOut])
+@router.get("", response_model=Page[ClientsWithSearchesOut])
 def list_clients(
     request: Request,
     db: Session = Depends(get_db),
