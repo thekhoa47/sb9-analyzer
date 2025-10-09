@@ -5,6 +5,7 @@ from .clients import router as clients_router
 from .results import router as results_router
 from .saved_searches import router as saved_searches_router
 from .debug import router as debug_router
+from .tasks import router as tasks_router
 
 
 router = APIRouter(prefix="/api")
@@ -15,3 +16,4 @@ router.include_router(clients_router)
 router.include_router(results_router)
 router.include_router(saved_searches_router)
 router.include_router(debug_router)
+router.include_router(tasks_router)

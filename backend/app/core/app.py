@@ -43,5 +43,4 @@ def create_app() -> FastAPI:
 
     # Include API routes
     app.include_router(api_router)
-
     return app

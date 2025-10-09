@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, List
+from typing import TYPE_CHECKING
 import uuid
 
 from sqlalchemy import String, Integer, ForeignKey, Boolean, text
@@ -34,17 +34,17 @@ class SavedSearch(BaseModel):
         Boolean, nullable=False, server_default=text("true")
     )
     client: Mapped[Client] = relationship("Client", back_populates="saved_searches")
-    fields: Mapped[List[SavedSearchField]] = relationship(
+    fields: Mapped[list[SavedSearchField]] = relationship(
         "SavedSearchField", back_populates="saved_search", cascade="all, delete-orphan"
     )
-    matches: Mapped[List[SavedSearchMatch]] = relationship(
+    matches: Mapped[list[SavedSearchMatch]] = relationship(
         "SavedSearchMatch", back_populates="saved_search", cascade="all, delete-orphan"
     )
-    analyses: Mapped[List[SearchListingAnalysis]] = relationship(
+    analyses: Mapped[list[SearchListingAnalysis]] = relationship(
         "SearchListingAnalysis",
         back_populates="saved_search",
         cascade="all, delete-orphan",
     )
-    sent_notifications: Mapped[List[SentNotification]] = relationship(
+    sent_notifications: Mapped[list[SentNotification]] = relationship(
         "SentNotification", back_populates="saved_search", cascade="all, delete-orphan"
     )

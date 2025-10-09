@@ -1,5 +1,5 @@
 import requests
-from typing import List, Dict
+from typing import Dict
 from app.core import settings
 
 
@@ -20,7 +20,7 @@ def build_filter(
 
 def poll_reso(
     city: str, beds_min: int, baths_min: int, max_price: int | None, since_iso: str
-) -> List[Dict]:
+) -> list[Dict]:
     """
     NOTE: Replace fields to match your MLS metadata if they differ.
     Add $select to trim payload if desired.

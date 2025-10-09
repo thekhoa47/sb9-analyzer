@@ -12,7 +12,7 @@ class Settings(BaseModel):
     PORT: int = int(os.getenv("PORT", "8000"))
     ENV: str = os.getenv("ENV", "dev")
 
-    BASE_URL: str = os.getenv("BASE_URL", "http://localhost:8000")
+    BASE_URL: str = os.getenv("BASE_URL", "http://127.0.0.1:8000/api")
     DATABASE_URL: str = os.getenv("DATABASE_URL")
     DATABASE_URL_MIGRATIONS: str = os.getenv("DATABASE_URL_MIGRATIONS")
 
@@ -44,6 +44,24 @@ class Settings(BaseModel):
     EMAIL_FROM_NAME: str = os.getenv("EMAIL_FROM_NAME")
     GMAIL_USER: str = os.getenv("GMAIL_USER")
     GMAIL_PASS: str = os.getenv("GMAIL_PASS")
+
+    CRON_SECRET: str | None = os.getenv("CRON_SECRET")
+    GCP_PROJECT: str = os.getenv("GCP_PROJECT", "")
+    GCP_REGION: str = os.getenv("GCP_REGION", "us-west1")
+    CLOUD_TASKS_QUEUE_DISPATCHER: str = os.getenv(
+        "CLOUD_TASKS_QUEUE_DISPATCHER", "dispatcher-jobs"
+    )
+    CLOUD_TASKS_QUEUE_SEARCH: str = os.getenv(
+        "CLOUD_TASKS_QUEUE_SEARCH", "saved-search-jobs"
+    )
+    CLOUD_TASKS_QUEUE_PROPERTY: str = os.getenv(
+        "CLOUD_TASKS_QUEUE_PROPERTY", "property-jobs"
+    )
+    CLOUD_TASKS_QUEUE_LISTING: str = os.getenv(
+        "CLOUD_TASKS_QUEUE_LISTING", "listing-jobs"
+    )
+    TASKS_SERVICE_ACCOUNT_EMAIL: str | None = os.getenv("TASKS_SERVICE_ACCOUNT_EMAIL")
+    TASKS_SHARED_SECRET: str | None = os.getenv("TASKS_SHARED_SECRET")
 
 
 settings = Settings()

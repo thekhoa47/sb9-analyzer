@@ -1,13 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from app.core import get_db
 from sqlalchemy.orm import Session
-from app.schemas import (
+from app.schemas.client import (
     OnboardNewClientIn,
-    OnboardNewClientOut,
     ClientOut,
-    SavedSearchOut,
     ClientsWithSearchesOut,
 )
+from app.schemas.saved_search import SavedSearchOut
 from app.models import Client, SavedSearch
 from sqlalchemy import select, or_
 from sqlalchemy.orm import selectinload
@@ -19,7 +18,48 @@ from typing import Optional
 router = APIRouter(prefix="/clients", tags=["clients"])
 
 
-@router.post("", response_model=OnboardNewClientOut, status_code=201)
+@router.get("", response_model=Page[ClientsWithSearchesOut])
+def list_clients(
+    request: Request,
+    db: Session = Depends(get_db),
+    params: Params = Depends(),  # ?page=1&size=50
+    search: Optional[str] = Query(
+        None
+    ),  # free text over name/email/phone/messenger_psid
+):
+    # Base selectable (1:1 join + eager load)
+    stmt = (
+        select(Client)
+        .join(Client.saved_searches)
+        .options(selectinload(Client.saved_searches))
+    )
+
+    # # Filters
+    # filters = parse_filters(request.query_params)
+    # colmap = {
+    #     "sms_opt_in": Client.sms_opt_in,
+    #     "email_opt_in": Client.email_opt_in,
+    #     "messenger_opt_in": Client.messenger_opt_in,
+    # }
+    # for field, value in filters:
+    #     col = colmap[field]
+    #     stmt = stmt.where(col == value)
+
+    # Search over address/city/state (+ “California” -> CA)
+    if search:
+        needle = search.strip()
+        like = f"%{needle}%"
+        ors = [
+            Client.name.ilike(like),
+            Client.email.ilike(like),
+            Client.phone.ilike(like),
+        ]
+        stmt = stmt.where(or_(*ors))
+
+    return paginate(db, stmt, params)
+
+
+@router.post("", response_model=ClientOut, status_code=201)
 def onboard_new_client(payload: OnboardNewClientIn, db: Session = Depends(get_db)):
     try:
         # Start a single transaction
@@ -68,69 +108,15 @@ def onboard_new_client(payload: OnboardNewClientIn, db: Session = Depends(get_db
             name=client.name,
             email=client.email,
             phone=client.phone,
-            # address=client.address,
+            address=client.address,
             created_at=client.created_at.isoformat(),
             updated_at=client.updated_at.isoformat() if client.updated_at else None,
+            saved_searches=saved_searches,
         )
 
-        return OnboardNewClientOut(client=client_out, saved_searches=saved_searches)
+        return client_out
 
     except Exception as e:
         # Optionally map DB errors to 4xx
         db.rollback()
         raise HTTPException(status_code=400, detail=str(e))
-
-
-@router.get("", response_model=Page[ClientsWithSearchesOut])
-def list_clients(
-    request: Request,
-    db: Session = Depends(get_db),
-    params: Params = Depends(),  # ?page=1&size=50
-    search: Optional[str] = Query(
-        None
-    ),  # free text over name/email/phone/messenger_psid
-):
-    # Base selectable (1:1 join + eager load)
-    stmt = (
-        select(Client)
-        .join(Client.saved_searches)
-        .options(selectinload(Client.saved_searches))
-    )
-
-    # # Filters
-    # filters = parse_filters(request.query_params)
-    # colmap = {
-    #     "sms_opt_in": Client.sms_opt_in,
-    #     "email_opt_in": Client.email_opt_in,
-    #     "messenger_opt_in": Client.messenger_opt_in,
-    # }
-    # for field, value in filters:
-    #     col = colmap[field]
-    #     stmt = stmt.where(col == value)
-
-    # Search over address/city/state (+ “California” -> CA)
-    if search:
-        needle = search.strip()
-        like = f"%{needle}%"
-        ors = [
-            Client.name.ilike(like),
-            Client.email.ilike(like),
-            Client.phone.ilike(like),
-        ]
-        stmt = stmt.where(or_(*ors))
-
-    return paginate(db, stmt, params)
-
-
-@router.get("/{client_id}", response_model=ClientOut)
-def get_client(client_id: int, db: Session = Depends(get_db)):
-    c = db.get(Client, client_id)
-    if not c:
-        raise HTTPException(404)
-    return ClientOut(
-        id=c.id,
-        name=c.name,
-        email=c.email,
-        phone=c.phone,
-        # address=c.address,
-    )

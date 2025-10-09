@@ -1,6 +1,6 @@
 from __future__ import annotations
 import uuid
-from typing import Optional, List, TYPE_CHECKING
+from typing import Optional, TYPE_CHECKING
 from sqlalchemy import ForeignKey, String, Boolean, DateTime, Numeric, Index, func, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.dialects.postgresql import UUID
@@ -41,13 +41,13 @@ class Listing(BaseModel):
     external_id: Mapped[Optional[str]] = mapped_column(String)
 
     property: Mapped["Property"] = relationship("Property", back_populates="listings")
-    matches: Mapped[List["SavedSearchMatch"]] = relationship(
+    matches: Mapped[list["SavedSearchMatch"]] = relationship(
         "SavedSearchMatch", back_populates="listing", cascade="all, delete-orphan"
     )
-    analyses: Mapped[List["SearchListingAnalysis"]] = relationship(
+    analyses: Mapped[list["SearchListingAnalysis"]] = relationship(
         "SearchListingAnalysis", back_populates="listing", cascade="all, delete-orphan"
     )
-    sent_notifications: Mapped[List["SentNotification"]] = relationship(
+    sent_notifications: Mapped[list["SentNotification"]] = relationship(
         "SentNotification", back_populates="listing", cascade="all, delete-orphan"
     )
 

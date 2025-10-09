@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from typing import Optional, TYPE_CHECKING, List
+from typing import TYPE_CHECKING
 
-from sqlalchemy import String
+from sqlalchemy import String, Boolean, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .base import BaseModel  # -> your abstract base with UUID/timestamps
@@ -17,16 +17,18 @@ class Client(BaseModel):
     __tablename__ = "clients"
 
     name: Mapped[str] = mapped_column(String(120), nullable=False)
-    email: Mapped[Optional[str]] = mapped_column(String(255))
-    phone: Mapped[Optional[str]] = mapped_column(String(32))
-    address: Mapped[Optional[str]] = mapped_column(String)
-
-    saved_searches: Mapped[List[SavedSearch]] = relationship(
+    email: Mapped[str | None] = mapped_column(String(255))
+    phone: Mapped[str | None] = mapped_column(String(32))
+    address: Mapped[str | None] = mapped_column(String)
+    is_active: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, server_default=text("true")
+    )
+    saved_searches: Mapped[list[SavedSearch]] = relationship(
         "SavedSearch", back_populates="client", cascade="all, delete-orphan"
     )
-    notification_preferences: Mapped[List[ClientNotificationPreference]] = relationship(
+    notification_preferences: Mapped[list[ClientNotificationPreference]] = relationship(
         back_populates="client", cascade="all, delete-orphan"
     )
-    sent_notifications: Mapped[List[SentNotification]] = relationship(
+    sent_notifications: Mapped[list[SentNotification]] = relationship(
         back_populates="client", cascade="all, delete-orphan"
     )

@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from app.core import get_db
 from app.models import SavedSearch
-from app.schemas import SavedSearchIn, SavedSearchOut
+from app.schemas.saved_search import SavedSearchIn, SavedSearchOut
 from sqlalchemy.orm import Session
 
 router = APIRouter(prefix="/saved-searches", tags=["saved-searches"])

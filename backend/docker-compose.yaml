@@ -1,0 +1,11 @@
+services:
+  dev-db:
+    image: postgis/postgis:16-3.4
+    container_name: hannah_dev_db
+    restart: always
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: hannah
+      POSTGRES_PASSWORD: hannah123
+      POSTGRES_DB: hannah

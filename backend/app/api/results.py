@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import Optional
 from fastapi import APIRouter, Depends, Query, Request, HTTPException
 from sqlalchemy.orm import Session, selectinload
 from sqlalchemy import or_, select
@@ -22,7 +22,7 @@ def list_results(
     request: Request,
     db: Session = Depends(get_db),
     params: Params = Depends(),  # ?page=1&size=50
-    sort_by: List[str] = Query(
+    sort_by: list[str] = Query(
         [], alias="sortBy"
     ),  # multi-sort: sortBy=city:DESC&sortBy=state:ASC
     search: Optional[str] = Query(None),  # free text over address/city/state
