@@ -1,5 +1,4 @@
 from fastapi import APIRouter, Depends
-from app.services.analyze_address import get_geoms_from_address
 from app.services.sb9 import get_property_geoms
 from app.services.sb9_2 import find_house_containment_split_feet
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -8,12 +7,6 @@ from app.schemas.property import PropertyOut
 from app.models import Property
 
 router = APIRouter(prefix="/debug", tags=["debug"])
-
-
-@router.post("/sb9")
-def debug_sb9(address: str):
-    result = get_geoms_from_address(address)
-    return result
 
 
 @router.post("/process-property-test")

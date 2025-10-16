@@ -84,10 +84,10 @@ def _make_find_listings_prompt(saved_search: SavedSearch) -> str:
 
     # Build the human-readable criteria (minimal guards; blanks are fine)
     criteria = (
-        "Find For Sale, current listings on Zillow that satisfy the requirements:\n"
+        "Find currently For Sale listings on Zillow that satisfy the requirements:\n"
         f"Must be {property_subtype} with minimum {beds_min} beds, and {baths_min} baths and maximum ${max_price}.\n"
-        f"Located within radius {within_radius} miles of {city} {('(' + zip_code + ')') if zip_code else ''}.\n"
-        f"Preferably: minimum {garage_spaces} garage spaces, minimum lot size {lot_size} sqft, and minimum living area {living_area} sqft.\n"
+        f"Located within Orange County (Aliso Viejo,Anaheim,Brea,Buena Park,Costa Mesa,Cypress,Dana Point,Fountain Valley,Fullerton,Garden Grove,Huntington Beach,Irvine,La Habra,La Palma,Laguna Beach,Laguna Hills,Laguna Niguel,Laguna Woods,Lake Forest,Los Alamitos,Mission Viejo,Newport Beach,Orange,Placentia,Rancho Santa Margarita,San Clemente,San Juan Capistrano,Santa Ana,Seal Beach,Stanton,Tustin,Villa Park,Westminster,Yorba Linda).\n",
+        f"Preferably: {garage_spaces} garage spaces, minimum lot size {lot_size} sqft, and minimum living area {living_area} sqft.\n",
     )
 
     schema = (
@@ -96,7 +96,7 @@ def _make_find_listings_prompt(saved_search: SavedSearch) -> str:
         '"address_line1":"str","address_line2":str|None,'
         '"city":str,"state":str,"zip":str,'
         '"listing_price":number,"listing_date":datetime ISO 8601,'
-        '"status":"ACTIVE|PENDING|COMING_SOON|CANCELED|SOLD",'
+        '"status":"ACTIVE",'
         '"bedrooms":int|None,"bathrooms":float|None,"year_built":int|None}'
         "]}"
     )
@@ -105,11 +105,10 @@ def _make_find_listings_prompt(saved_search: SavedSearch) -> str:
         f"{criteria}\n"
         "Return STRICTLY valid JSON ONLY in the exact schema below (no prose, no code fences):\n"
         f"{schema}\n\n"
-        "Infer status from visible labels. Only count as Found if the final status is ACTIVE. If unsure about some fields, use None.\n"
-        "For listing_date use the days on Zillow to estimate the date.\n"
-        "Address Line 1 need to be house number + street name. Don't put City, State, Zip in address line 1.\n"
-        "DO NOT MAKE UP ANY LISTING"
-        'If nothing found, or cannot find all of the primary keys (keys without None option) return exactly {"listings":[]}.'
+        "DO NOT MAKE UP ANY FAKE LISTING. DO NOT GIVE ME SOLD OR OFF MARKET LISTINGS\n"
+        "For listing_date use the Days on Zillow to estimate the date.\n"
+        "DO NOT put City, State, Zip in address line 1.\n"
+        'If nothing found, return exactly {"listings":[]}.'
     )
 
 

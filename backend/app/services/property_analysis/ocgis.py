@@ -1,7 +1,22 @@
-from typing import Dict, Any, Optional
+from __future__ import annotations
 
 import requests
 import json
+
+from shapely.geometry import shape, Polygon
+from .geometry_ops import ewkb_or_shapely_to_esri
+
+import matplotlib
+
+matplotlib.use("Agg")
+
+
+try:
+    from geoalchemy2.elements import WKBElement
+except Exception:  # pragma: no cover
+
+    class WKBElement:  # type: ignore
+        pass
 
 
 OC_BUILDINGS_LAYER = "https://www.ocgis.com/arcpub/rest/services/Map_Layers/Building_Footprints/FeatureServer/0/query"
@@ -13,7 +28,7 @@ def call_ocgis(url: str, **kwargs) -> requests.Response:
     return requests.get(url, **kwargs)
 
 
-def _get_location_from_ocgis(address_in: str) -> Optional[Dict[str, Any]]:
+def get_location_from_ocgis(address_in: str) -> dict | None:
     params = {"SingleLine": address_in, "outSR": 2230, "f": "pjson"}
 
     try:
@@ -39,9 +54,9 @@ def _get_location_from_ocgis(address_in: str) -> Optional[Dict[str, Any]]:
         return None
 
 
-def _get_parcel_geom_from_ocgis(lat: float, lon: float) -> Optional[list[list[float]]]:
+def get_parcel_polygon_from_ocgis(lat: float, lon: float) -> Polygon | None:
     params = {
-        "f": "json",
+        "f": "geojson",
         "geometry": json.dumps(
             {
                 "x": lon,
@@ -67,27 +82,25 @@ def _get_parcel_geom_from_ocgis(lat: float, lon: float) -> Optional[list[list[fl
         if not features:
             return None
 
-        return features[0].get("geometry").get("rings")[0]
+        return shape(features[0].get("geometry"))
 
     except requests.RequestException as e:
         print(f"Error fetching parcel geom from OC GIS: {e}")
         return None
 
 
-def _get_building_geom_from_ocgis(
-    parcel: list[list[float]],
-) -> Optional[list[list[float]]]:
+def get_building_polygon_from_ocgis(
+    parcel: Polygon,
+) -> Polygon | None:
+    esri_geom = ewkb_or_shapely_to_esri(parcel)
     params = {
-        "f": "json",
-        "geometry": json.dumps(
-            {
-                "rings": [parcel],
-                "spatialReference": {"wkid": 2230},
-            }
-        ),
+        "f": "geojson",
+        "geometry": json.dumps(esri_geom),
         "geometryType": "esriGeometryPolygon",
         "spatialRel": "esriSpatialRelContains",
+        "units": "esriSRUnit_Foot",
         "returnGeometry": "true",
+        "outSR": 2230,
         "outFields": "*",
     }
 
@@ -100,27 +113,8 @@ def _get_building_geom_from_ocgis(
         if not features:
             return None
 
-        return features[0].get("geometry").get("rings")[0]
+        return shape(features[0].get("geometry"))
 
     except requests.RequestException as e:
         print(f"Error fetching building geom from OC GIS: {e}")
         return None
-
-
-async def get_geoms_from_address(address_in: str) -> dict:
-    # 1) Geocode address to lat/lon
-    lat, lon, address = _get_location_from_ocgis(address_in)
-    parcel = _get_parcel_geom_from_ocgis(lat, lon)
-    building = _get_building_geom_from_ocgis(parcel)
-
-    if not parcel and not building:
-        return {
-            "address": address_in,
-            "error": "Address not found or no data available",
-        }
-
-    return {
-        "address": address,
-        "parcel": parcel,
-        "house": building,
-    }

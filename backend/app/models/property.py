@@ -1,9 +1,7 @@
 from __future__ import annotations
 from .base import BaseModel
-from sqlalchemy.sql import type_coerce
-from sqlalchemy.orm import Mapped, relationship, mapped_column, column_property
-from sqlalchemy import Index, String, Float, Integer, func
-from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.orm import Mapped, relationship, mapped_column
+from sqlalchemy import Index, String, Float, Integer
 from typing import Optional, TYPE_CHECKING
 from geoalchemy2 import Geometry
 from geoalchemy2.types import WKBElement
@@ -30,16 +28,6 @@ class Property(BaseModel):
     )
     lot_geometry: Mapped[Optional[WKBElement]] = mapped_column(
         Geometry("POLYGON", srid=2230)
-    )
-    # Derived (read-only) coordinates in SRID 2230; not physically stored:
-    house_coords = column_property(
-        type_coerce(func.ST_AsGeoJSON(house_geometry, 15, 8), JSONB)["coordinates"],
-        deferred=True,  # optional: don’t load by default
-    )
-
-    lot_coords = column_property(
-        type_coerce(func.ST_AsGeoJSON(lot_geometry, 15, 8), JSONB)["coordinates"],
-        deferred=True,
     )
 
     listings: Mapped[Optional[Listing]] = relationship(

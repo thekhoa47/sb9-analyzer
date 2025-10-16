@@ -1,13 +1,13 @@
 import { configs } from '@/configs/configs';
-import { AnalyzeResult } from '@/types/MaskResult';
+import { PropertyAnalysisOut } from '@/types/PropertyAnalysis';
 
 const BACKEND_BASE_URL = configs.NEXT_PUBLIC_BACKEND_URL;
 
-export async function postSb9AnalyzeByAddress(address: string): Promise<AnalyzeResult> {
-  const response = await fetch(`${BACKEND_BASE_URL}/analyze`, {
+export async function postPropertyAnalysisFromAddress(address: string): Promise<PropertyAnalysisOut> {
+  const response = await fetch(`${BACKEND_BASE_URL}/analyze-property-from-address`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ address }),
+    body: JSON.stringify({ address_in: address }),
   });
 
   // Try to parse JSON regardless of status
@@ -23,5 +23,5 @@ export async function postSb9AnalyzeByAddress(address: string): Promise<AnalyzeR
     throw Object.assign(new Error(detail), { status: response.status });
   }
 
-  return body as AnalyzeResult;
+  return body as PropertyAnalysisOut;
 }

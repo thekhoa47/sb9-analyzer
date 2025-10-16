@@ -1,37 +1,36 @@
-from typing import Optional
 from fastapi import APIRouter, Depends, Query, Request, HTTPException
 from sqlalchemy.orm import Session, selectinload
 from sqlalchemy import or_, select
 from fastapi_pagination import Page, Params
 from fastapi_pagination.ext.sqlalchemy import paginate
 from app.core import get_db
-from app.models import PropertyAnalysis, Property
-from app.schemas import ResultWithProperty
+from app.models import Property, PropertyAnalysis
+from app.schemas.property import PropertyWithAnalysisOut
 from app.utils.parse_filters import parse_filters
 from app.utils.geo_norm import normalize_state
 
 
-router = APIRouter(prefix="/results", tags=["results"])
+router = APIRouter(prefix="/analyzed-properties", tags=["analyzed-properties"])
 
 
 ALLOWED_SORT = {"address_line1", "city", "state", "zip"}
 
 
-@router.get("", response_model=Page[ResultWithProperty])
-def list_results(
+@router.get("", response_model=Page[PropertyWithAnalysisOut])
+def list_analyzed_properties(
     request: Request,
     db: Session = Depends(get_db),
     params: Params = Depends(),  # ?page=1&size=50
-    sort_by: list[str] = Query(
+    sort_by: list[str] | None = Query(
         [], alias="sortBy"
     ),  # multi-sort: sortBy=city:DESC&sortBy=state:ASC
-    search: Optional[str] = Query(None),  # free text over address/city/state
+    search: str | None = Query(None),  # free text over address/city/state
 ):
     # Base selectable (1:1 join + eager load)
     stmt = (
-        select(PropertyAnalysis)
-        .join(PropertyAnalysis.property)
-        .options(selectinload(PropertyAnalysis.property))
+        select(Property)
+        .join(Property.analysis)
+        .options(selectinload(Property.analysis))
     )
 
     # Filters
@@ -40,11 +39,11 @@ def list_results(
         "city": Property.city,
         "state": Property.state,
         "zip": Property.zip,
+        "sb9": PropertyAnalysis.sb9_possible,
+        "adu": PropertyAnalysis.adu_possible,
     }
     for field, op, value in filters:
         col = colmap[field]
-        if field == "state":
-            value = normalize_state(value) or value  # allow full names
         if op == "$eq":
             stmt = stmt.where(col == value)
         elif op == "$ne":

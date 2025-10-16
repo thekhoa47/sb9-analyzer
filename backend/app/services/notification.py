@@ -237,5 +237,4 @@ async def notify_client_for_good_listing(
                 )
             )
 
-    session.flush()
     await session.commit()

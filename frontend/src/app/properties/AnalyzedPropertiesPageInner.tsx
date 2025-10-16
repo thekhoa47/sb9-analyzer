@@ -1,11 +1,11 @@
 'use client';
 import { useDebounce } from '@/hooks/useDebounce';
-import { useResult } from '@/hooks/useResults';
+import { useAnalyzedProperties } from '@/hooks/useAnalyzedProperties';
 import { useUrlStateGroup } from '@/hooks/useUrlState';
 import Image from 'next/image';
 import { useEffect, useMemo, useState } from 'react';
 
-export default function ResultsPageInner() {
+export default function AnalyzedPropertiesPageInner() {
   const { query, updateQuery } = useUrlStateGroup({
     page: { fromUrl: Number, defaultValue: 1 },
     size: { fromUrl: Number, defaultValue: 10 },
@@ -37,7 +37,7 @@ export default function ResultsPageInner() {
     [query, debouncedSearchTerm]
   );
 
-  const { isPending, isError, isSuccess, data, error } = useResult(filteredParams);
+  const { isPending, isError, isSuccess, data, error } = useAnalyzedProperties(filteredParams);
 
   return (
     <div className="flex flex-col gap-4 p-6 w-full md:w-[600px]">
@@ -60,7 +60,7 @@ export default function ResultsPageInner() {
             <div key={item.id} className="flex gap-2 items-center border p-2 rounded">
               <div style={{ width: 180, height: 180, position: 'relative' }}>
                 <Image
-                  src={item.property.image_url ?? '/fallback.png'}
+                  src={item.analysis.image_url ?? '/fallback.png'}
                   alt="Property image"
                   fill
                   style={{ objectFit: 'cover', objectPosition: 'center' }}
@@ -69,10 +69,12 @@ export default function ResultsPageInner() {
 
               <div>
                 <address>
-                  {item.property.address}, {item.property.city}, {item.property.state}{' '}
-                  {item.property.zip}
+                  {item.address_line1},{item.address_line2 ?? ` ${item.address_line2},`} {item.city}
+                  , {item.state} {item.zip}
                 </address>
-                <span className="font-weight">{item.predicted_label}</span>
+                <span className="font-weight">SB9: {item.analysis.sb9_possible}</span>
+                <span className="font-weight">ADU: {item.analysis.adu_possible}</span>
+                <span className="font-weight">MaxSplit: {item.analysis.band_low}/{item.analysis.band_high}</span>
               </div>
             </div>
           ))}

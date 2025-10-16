@@ -17,4 +17,5 @@ requests==2.32.4
 shapely==2.1.1
 SQLAlchemy==2.0.43
 twilio==9.7.2
+usaddress==0.5.16
 uvicorn==0.35.0

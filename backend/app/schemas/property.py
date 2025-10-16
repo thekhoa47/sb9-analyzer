@@ -6,6 +6,7 @@ from typing import Annotated
 from uuid import UUID
 from geoalchemy2.shape import to_shape
 from shapely.geometry import mapping
+from .property_analysis import PropertyAnalysisOut
 
 Coord = tuple[float, float]  # exactly two numbers
 LinearRing = Annotated[list[Coord], Field(min_length=4)]
@@ -40,3 +41,7 @@ class PropertyOut(PropertyBase):
         if isinstance(v, WKBElement):
             return mapping(to_shape(v))
         return v  # already dict
+
+
+class PropertyWithAnalysisOut(PropertyOut):
+    analysis: PropertyAnalysisOut | None
