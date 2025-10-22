@@ -6,14 +6,13 @@ import {
   type UseFormRegister,
   type FieldErrors,
 } from 'react-hook-form';
-import { formSchema, savedSearchFieldSchema } from './formSchema';
+import { formSchema } from './formSchema';
 import { Button } from '@/components/button';
 import { FaTrash, FaX } from 'react-icons/fa6';
 
 // ----------------- types from zod -----------------
 type Schema = typeof formSchema;
 type FormInput = z.input<Schema>;
-type SavedSearchField = z.infer<typeof savedSearchFieldSchema>;
 
 // ----------------- constants -----------------
 const FIELD_OPTIONS = [
@@ -179,9 +178,7 @@ export function SavedSearchCard({
             placeholder={FIELD_OPTIONS.find((o) => o.value === selKey)?.placeholder ?? ''}
             className="rounded border px-3 py-2 outline-none focus:ring"
           />
-          <Button onClick={addCriterion}>
-            Add criteria
-          </Button>
+          <Button onClick={addCriterion}>Add criteria</Button>
         </div>
 
         {fields.length > 0 && (
