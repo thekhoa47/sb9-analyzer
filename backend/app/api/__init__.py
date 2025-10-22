@@ -6,6 +6,7 @@ from .analyzed_properties import router as analyzed_properties_router
 from .saved_searches import router as saved_searches_router
 from .debug import router as debug_router
 from .tasks import router as tasks_router
+from .auth import router as auth_router
 
 
 router = APIRouter(prefix="/api")
@@ -17,3 +18,4 @@ router.include_router(analyzed_properties_router)
 router.include_router(saved_searches_router)
 router.include_router(debug_router)
 router.include_router(tasks_router)
+router.include_router(auth_router)

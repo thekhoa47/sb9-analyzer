@@ -1,13 +1,17 @@
-from fastapi import APIRouter, Depends, HTTPException, Query, Request
-from app.core import get_db
+from fastapi import APIRouter, Depends, HTTPException, Query
+from app.core import get_local_session, get_async_session
 from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 from app.schemas.client import (
-    OnboardNewClientIn,
+    ClientIn,
     ClientOut,
-    ClientsWithSearchesOut,
 )
-from app.schemas.saved_search import SavedSearchOut
-from app.models import Client, SavedSearch
+from app.models import (
+    Client,
+    SavedSearch,
+    SavedSearchField,
+    ClientNotificationPreference,
+)
 from sqlalchemy import select, or_
 from sqlalchemy.orm import selectinload
 from fastapi_pagination import Page, Params
@@ -18,10 +22,9 @@ from typing import Optional
 router = APIRouter(prefix="/clients", tags=["clients"])
 
 
-@router.get("", response_model=Page[ClientsWithSearchesOut])
+@router.get("", response_model=Page[ClientOut])
 def list_clients(
-    request: Request,
-    db: Session = Depends(get_db),
+    session: Session = Depends(get_local_session),
     params: Params = Depends(),  # ?page=1&size=50
     search: Optional[str] = Query(
         None
@@ -56,67 +59,61 @@ def list_clients(
         ]
         stmt = stmt.where(or_(*ors))
 
-    return paginate(db, stmt, params)
+    return paginate(session, stmt, params)
 
 
 @router.post("", response_model=ClientOut, status_code=201)
-def onboard_new_client(payload: OnboardNewClientIn, db: Session = Depends(get_db)):
+async def onboard_new_client(
+    payload: ClientIn, session: AsyncSession = Depends(get_async_session)
+):
     try:
         # Start a single transaction
-        with db.begin():
+        async with session.begin():
             # 1) create client
             client = Client(
                 name=payload.name,
                 email=payload.email,
                 phone=payload.phone,
-                # address=payload.address,
+                address=payload.address,
+                is_active=True,
             )
-            db.add(client)
-            db.flush()  # assign client.id
+            session.add(client)
+            await session.flush()  # assign client.id
 
             # 2) create saved searches
-            saved_searches = []
-            for item in payload.listing_preferences:
-                s = SavedSearch(
-                    client_id=client.id,
-                    name=item.name,
-                    city=item.city,
-                    beds_min=item.beds_min,
-                    baths_min=item.baths_min,
-                    max_price=item.max_price,
-                    # criteria_json=item.criteria_json,
-                )
-                db.add(s)
-                db.flush()  # get s.id, s.cursor_iso
-                # Build output (you can also use Pydantic model_validate if on Pydantic v2)
-                saved_searches.append(
-                    SavedSearchOut(
-                        id=str(s.id),
-                        client_id=str(s.client_id),
-                        name=s.name,
-                        beds_min=s.beds_min,
-                        baths_min=s.baths_min,
-                        max_price=s.max_price,
-                        created_at=s.created_at.isoformat(),
-                        updated_at=s.updated_at.isoformat() if s.updated_at else None,
-                    )
-                )
+            for ss in payload.saved_searches or []:
+                saved_search = SavedSearch(**ss.model_dump(exclude={"fields"}))
+                saved_search.client = client
+                session.add(saved_search)
+                # 3) create saved search fields
+                for ssf in ss.fields:
+                    field = SavedSearchField(**ssf.model_dump())
+                    field.saved_search = saved_search  # <— link via parent
+                    session.add(field)
+
+            # 4) create client_notification_preferences
+            for np in payload.notification_preferences:
+                pref = ClientNotificationPreference(**np.model_dump())
+                pref.client = client  # <— link via parent
+                session.add(pref)
 
         # 3) Return combined response (commit happened on exiting the context)
-        client_out = ClientOut(
-            id=str(client.id),
-            name=client.name,
-            email=client.email,
-            phone=client.phone,
-            address=client.address,
-            created_at=client.created_at.isoformat(),
-            updated_at=client.updated_at.isoformat() if client.updated_at else None,
-            saved_searches=saved_searches,
+        new_client = await session.execute(
+            select(Client)
+            .where(Client.id == client.id)
+            .options(
+                selectinload(Client.saved_searches).selectinload(SavedSearch.fields),
+                selectinload(Client.notification_preferences),
+            )
         )
+        client_out = new_client.scalar_one()
+        if client_out is None:
+            raise HTTPException(status_code=404, detail="Client not found after create")
 
-        return client_out
+        return ClientOut.model_validate(client_out, from_attributes=True)
 
+    except HTTPException:
+        raise
     except Exception as e:
-        # Optionally map DB errors to 4xx
-        db.rollback()
+        # optionally inspect IntegrityError, DataError, etc.
         raise HTTPException(status_code=400, detail=str(e))

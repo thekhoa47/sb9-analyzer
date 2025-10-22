@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session, selectinload
 from sqlalchemy import or_, select
 from fastapi_pagination import Page, Params
 from fastapi_pagination.ext.sqlalchemy import paginate
-from app.core import get_db
+from app.core import get_local_session
 from app.models import Property, PropertyAnalysis
 from app.schemas.property import PropertyWithAnalysisOut
 from app.utils.parse_filters import parse_filters
@@ -19,7 +19,7 @@ ALLOWED_SORT = {"address_line1", "city", "state", "zip"}
 @router.get("", response_model=Page[PropertyWithAnalysisOut])
 def list_analyzed_properties(
     request: Request,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_local_session),
     params: Params = Depends(),  # ?page=1&size=50
     sort_by: list[str] | None = Query(
         [], alias="sortBy"

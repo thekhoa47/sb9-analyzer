@@ -1,6 +1,6 @@
 from __future__ import annotations
 from datetime import datetime
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 from uuid import UUID
 
 
@@ -22,41 +22,34 @@ class SavedSearchFieldBase(BaseModel):
 
 
 class SavedSearchFieldIn(SavedSearchFieldBase):
-    saved_search_id: UUID
+    pass
 
 
 class SavedSearchFieldOut(SavedSearchFieldIn):
     id: UUID
+    saved_search_id: UUID
     created_at: datetime
     updated_at: datetime | None
     model_config = ConfigDict(from_attributes=True)
 
 
 class SavedSearchBase(BaseModel):
-    client_id: UUID
     name: str
     beds_min: int = 1
     baths_min: int = 1
     max_price: int | None = None
     analysis_note: str | None = None
-
-
-class SavedSearchSummary(BaseModel):
-    id: UUID
-    name: str
-    created_at: datetime
-    updated_at: datetime | None = None
-    model_config = ConfigDict(from_attributes=True)
+    is_active: bool = True
 
 
 class SavedSearchOut(SavedSearchBase):
     id: UUID
+    client_id: UUID
     created_at: datetime
     updated_at: datetime | None
-    fields: list[SavedSearchFieldOut]
-    matches: list[SavedSearchMatchOut]
+    fields: list[SavedSearchFieldOut] | None
     model_config = ConfigDict(from_attributes=True)
 
 
 class SavedSearchIn(SavedSearchBase):
-    fields: list[SavedSearchFieldIn]
+    fields: list[SavedSearchFieldIn] = Field(default_factory=list)

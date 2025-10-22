@@ -19,7 +19,7 @@ export function Modal({ open, title, onClose, children }: ModalProps) {
     >
       {/* Backdrop (no outside-close) */}
       <div className="absolute inset-0 bg-black/40" onClick={(e) => e.preventDefault()} />
-      <div className="relative z-10  max-w-md h-[600px] w-[700px] rounded-xl bg-gray-700 p-6 shadow-xl overflow-y-auto">
+      <div className="relative z-10 h-[600px] w-[700px] rounded-xl bg-gray-700 p-6 shadow-xl overflow-y-auto">
         {title && (
           <h2 id="modal-title" className="text-lg font-semibold mb-4">
             {title}

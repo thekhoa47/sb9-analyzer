@@ -49,13 +49,13 @@ SessionLocal = sessionmaker(
 )
 
 
-def get_db() -> Iterator:
+def get_local_session() -> Iterator:
     """FastAPI dependency to yield a SYNC session (psycopg3)."""
-    db = SessionLocal()
+    session = SessionLocal()
     try:
-        yield db
+        yield session
     finally:
-        db.close()
+        session.close()
 
 
 # ---------- Async engine & session (psycopg3 async) ----------

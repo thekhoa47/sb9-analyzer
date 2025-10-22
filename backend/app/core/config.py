@@ -12,7 +12,7 @@ class Settings(BaseModel):
     PORT: int = int(os.getenv("PORT", "8000"))
     ENV: str = os.getenv("ENV", "dev")
 
-    BASE_URL: str = os.getenv("BASE_URL", "http://127.0.0.1:8000/api")
+    BASE_URL: str = os.getenv("BASE_URL", "http://localhost:8000/api")
     DATABASE_URL: str = os.getenv("DATABASE_URL")
     DATABASE_URL_MIGRATIONS: str = os.getenv("DATABASE_URL_MIGRATIONS")
 
@@ -62,6 +62,14 @@ class Settings(BaseModel):
     )
     TASKS_SERVICE_ACCOUNT_EMAIL: str | None = os.getenv("TASKS_SERVICE_ACCOUNT_EMAIL")
     TASKS_SHARED_SECRET: str | None = os.getenv("TASKS_SHARED_SECRET")
+
+    SECRET_KEY: str = os.getenv("SECRET_KEY")
+    ADMIN_USERNAME: str = os.getenv("ADMIN_USERNAME")
+    ADMIN_PASSWORD_HASH: str = os.getenv("ADMIN_PASSWORD_HASH")
+
+    SESSION_COOKIE_NAME: str = os.getenv("SESSION_COOKIE_NAME")
+    SESSION_AGE: str = os.getenv("SESSION_AGE", 60 * 60 * 24 * 30)  # 7 days
+    SESSION_COOKIE_SECURE: bool = os.getenv("SESSION_COOKIE_SECURE", True)
 
 
 settings = Settings()

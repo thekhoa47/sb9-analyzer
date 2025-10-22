@@ -1,18 +1,13 @@
 'use client';
 import { Button } from '@/components/button';
-import { Modal } from '@/components/modal';
-import { NewClientForm } from './newClientForm';
 import { useEffect, useMemo, useState } from 'react';
-import { FormValues } from './formSchema';
-import { useOnboardNewClient } from '@/hooks/useOnboardNewClient';
 import PageShell from '@/components/layout';
 import { useUrlStateGroup } from '@/hooks/useUrlState';
 import { useDebounce } from '@/hooks/useDebounce';
 import { useClients } from '@/hooks/useClients';
+import Link from 'next/link';
 
 export default function ClientsPageInner() {
-  const [open, setOpen] = useState(false);
-  const [formInstance, setFormInstance] = useState(0); // forces form reset on reopen
   const { query, updateQuery } = useUrlStateGroup({
     page: { fromUrl: Number, defaultValue: 1 },
     size: { fromUrl: Number, defaultValue: 10 },
@@ -51,36 +46,10 @@ export default function ClientsPageInner() {
     error: errorClients,
   } = useClients(filteredParams);
 
-  const {
-    mutateAsync, // ← use the async variant
-    isPending,
-    isError,
-    error,
-    reset: resetMutation, // clears mutation state (optional)
-  } = useOnboardNewClient();
-
-  const handleSubmit = async (data: FormValues) => {
-    try {
-      await mutateAsync(data); // await server result
-      setOpen(false); // close **only** on success
-      resetMutation(); // clear mutation state for next time
-      setFormInstance((n) => n + 1); // remount form → clear fields
-    } catch {
-      // isError + error are already set by React Query
-      // leave modal open so user can see the error and fix it
-    }
-  };
-
-  const handleCancel = () => {
-    setOpen(false);
-    resetMutation();
-    setFormInstance((n) => n + 1); // also clear form when cancelling
-  };
-
   return (
     <PageShell title="Clients">
-      <Button variant="outlined" onClick={() => setOpen(true)}>
-        + New Client
+      <Button variant="outlined">
+        <Link href="/admin/clients/new-client">+ New Client</Link>
       </Button>
       <div className="relative">
         {/* example: icon-in-input prefix (optional) */}
@@ -105,30 +74,6 @@ export default function ClientsPageInner() {
           ))}
         </>
       )}
-
-      <Modal
-        open={open}
-        title="Add New Client"
-        onClose={() => {
-          if (!isPending) handleCancel(); // prevent closing while submitting
-        }}
-        // If your <Modal> supports it, also disable backdrop/escape close while pending
-        // disableBackdropClose={isPending}
-        // disableEscapeKeyDown={isPending}
-      >
-        {/* Show mutation errors at the top */}
-        {isError && (
-          <p className="mb-2 text-sm text-red-600">
-            {(error as Error)?.message ?? 'Something went wrong. Please try again.'}
-          </p>
-        )}
-
-        <NewClientForm
-          key={formInstance} // remount to reset fields
-          onSubmit={handleSubmit}
-          onCancel={handleCancel}
-        />
-      </Modal>
     </PageShell>
   );
 }

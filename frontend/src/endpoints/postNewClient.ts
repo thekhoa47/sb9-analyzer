@@ -1,11 +1,8 @@
 import { FormValues } from '@/app/admin/clients/formSchema';
-import { configs } from '@/configs/configs';
 import { NewClient } from '@/types/NewClient';
 
-const BACKEND_BASE_URL = configs.NEXT_PUBLIC_BACKEND_URL;
-
 export async function onboardNewClient(payload: FormValues): Promise<NewClient> {
-  const response = await fetch(`${BACKEND_BASE_URL}/clients`, {
+  const response = await fetch("/api/clients", {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),

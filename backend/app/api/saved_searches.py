@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
-from app.core import get_db
+from app.core import get_local_session
 from app.models import SavedSearch
 from app.schemas.saved_search import SavedSearchIn, SavedSearchOut
 from sqlalchemy.orm import Session
@@ -9,7 +9,9 @@ router = APIRouter(prefix="/saved-searches", tags=["saved-searches"])
 
 # --- Saved Searches ---
 @router.post("/saved-searches", response_model=SavedSearchOut)
-def create_saved_search(payload: SavedSearchIn, db: Session = Depends(get_db)):
+def create_saved_search(
+    payload: SavedSearchIn, db: Session = Depends(get_local_session)
+):
     s = SavedSearch(**payload.model_dump())
     db.add(s)
     db.commit()
@@ -18,7 +20,7 @@ def create_saved_search(payload: SavedSearchIn, db: Session = Depends(get_db)):
 
 
 @router.get("/saved-searches/{search_id}", response_model=SavedSearchOut)
-def get_saved_search(search_id: int, db: Session = Depends(get_db)):
+def get_saved_search(search_id: int, db: Session = Depends(get_local_session)):
     s = db.get(SavedSearch, search_id)
     if not s:
         raise HTTPException(404)

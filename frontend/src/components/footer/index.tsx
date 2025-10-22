@@ -2,7 +2,7 @@
 import clsx from 'clsx';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { FaUserShield, FaHouseFlag, FaHouse, FaChartPie } from 'react-icons/fa6';
+import { FaUserShield, FaHouseFlag, FaChartPie } from 'react-icons/fa6';
 import { TbTools } from "react-icons/tb";
 
 const appLinks = [

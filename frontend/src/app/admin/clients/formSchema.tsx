@@ -1,8 +1,5 @@
 import { z } from 'zod';
 
-// -------- Validators --------
-
-// Optional email field: "" → undefined
 export const emailSchema = z
   .preprocess(
     (v) => (typeof v === 'string' && v.trim() === '' ? undefined : v),
@@ -10,8 +7,8 @@ export const emailSchema = z
   )
   .optional();
 
-// Optional phone field: "" → undefined
 const phoneRegex = /^\+?[1-9]\d{7,14}$/; // tweak to your needs
+
 export const phoneSchema = z
   .preprocess(
     (v) => (typeof v === 'string' && v.trim() === '' ? undefined : v),
@@ -19,36 +16,49 @@ export const phoneSchema = z
   )
   .optional();
 
-// Messenger PSID (optional, no strict validation)
-export const messengerSchema = z
-  .preprocess((v) => (typeof v === 'string' && v.trim() === '' ? undefined : v), z.string())
-  .optional();
+export const maxPriceSchema = z.preprocess(
+  (v) => {
+    if (v === '' || v == null) return undefined;
+    if (typeof v === 'number') return Number.isNaN(v) ? undefined : v;
+    if (typeof v === 'string') {
+      const n = Number(v.replace(/,/g, ''));
+      return Number.isNaN(n) ? undefined : n;
+    }
+    return v;
+  },
+  z.union([z.number().int().min(0, 'Max price must be ≥ 0'), z.undefined()])
+);
 
-// Saved search schema
-export const savedSearchSchema = z.object({
-  name: z.string().min(1, 'Name is required'),
-  city: z.string().min(1, 'City is required'),
-  radius_miles: z.coerce.number().min(0, 'Radius must be ≥ 0'),
-  beds_min: z.coerce.number().int().min(0, 'Beds must be ≥ 0'),
-  baths_min: z.coerce.number().int().min(0, 'Baths must be ≥ 0'),
-  max_price: z
-    .preprocess(
-      (v) => (v === '' ? undefined : v),
-      z.coerce.number().min(0, 'Max price must be ≥ 0')
-    )
-    .optional(),
+export const savedSearchFieldSchema = z.object({
+  search_field: z.string(),
+  value: z.string(),
 });
 
-// Main form schema
-export const formSchema = z.object({
+export const clientSchema = z.object({
   name: z.string().min(1, 'Name is required'),
   email: emailSchema,
   phone: phoneSchema,
-  messenger_psid: messengerSchema,
-  email_opt_in: z.boolean().optional(),
-  sms_opt_in: z.boolean().optional(),
-  messenger_opt_in: z.boolean().optional(),
-  listing_preferences: z.array(savedSearchSchema).min(1, 'At least one search required'),
+  address: z.string().optional(),
+  is_active: z.boolean().default(true),
+});
+
+export const savedSearchSchema = z.object({
+  name: z.string().min(1, 'Name is required'),
+  beds_min: z.coerce.number().int().min(0, 'Beds must be ≥ 0'),
+  baths_min: z.coerce.number().int().min(0, 'Baths must be ≥ 0'),
+  max_price: maxPriceSchema,
+  analysis_note: z.string().optional(),
+  fields: z.array(savedSearchFieldSchema).optional(),
+});
+
+export const clientNotificationPreferenceSchema = z.object({
+  channel: z.string(),
+  enabled: z.boolean(),
+});
+
+export const formSchema = clientSchema.extend({
+  saved_searches: z.array(savedSearchSchema).min(1, 'At least one search required'),
+  notification_preferences: z.array(clientNotificationPreferenceSchema),
 });
 
 export type FormValues = z.infer<typeof formSchema>;

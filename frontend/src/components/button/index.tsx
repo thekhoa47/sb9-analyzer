@@ -5,13 +5,16 @@ type ButtonProps = {
   children: React.ReactNode;
   variant?: 'contained' | 'outlined' | 'text';
   color?: 'primary' | 'danger' | 'success' | 'warning' | 'info';
+  size?: 'sm' | 'md' | 'lg';
   className?: string;
 } & ComponentProps<'button'>;
 
 export const Button = ({
   variant = 'contained',
   color = 'primary',
+  size = 'md',
   children,
+  className,
   ...props
 }: ButtonProps) => {
   const variantClasses = {
@@ -47,15 +50,20 @@ export const Button = ({
     },
   };
 
+  const sizeClasses = {
+    sm: 'h-8 px-2',
+    md: 'h-10 px-4',
+    lg: 'h-12 px-6',
+  };
   return (
     <button
       className={clsx(
         props.disabled ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer',
-        'flex items-center justify-center gap-2 w-full sm:w-auto h-10 sm:h-12 px-4 sm:px-5 rounded-sm transition-colors font-medium sm:text-base',
+        'flex items-center justify-center gap-2 w-full sm:w-auto rounded-sm transition-colors font-medium sm:text-base',
         variantClasses[variant],
         colorClasses[variant][color],
-
-        props.className
+        sizeClasses[size],
+        className
       )}
       {...props}
     >

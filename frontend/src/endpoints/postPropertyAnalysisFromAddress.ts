@@ -1,10 +1,9 @@
-import { configs } from '@/configs/configs';
 import { PropertyAnalysisOut } from '@/types/PropertyAnalysis';
 
-const BACKEND_BASE_URL = configs.NEXT_PUBLIC_BACKEND_URL;
-
-export async function postPropertyAnalysisFromAddress(address: string): Promise<PropertyAnalysisOut> {
-  const response = await fetch(`${BACKEND_BASE_URL}/analyze-property-from-address`, {
+export async function postPropertyAnalysisFromAddress(
+  address: string
+): Promise<PropertyAnalysisOut> {
+  const response = await fetch('/api/analyze-property-from-address', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ address_in: address }),
