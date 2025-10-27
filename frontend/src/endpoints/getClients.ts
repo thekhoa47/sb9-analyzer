@@ -1,3 +1,4 @@
+import { configs } from '@/configs/configs';
 import { PaginatedClients } from '@/types/NewClient';
 import { URLSearchParamsInit } from '@/types/URLSearchParamsInit';
 
@@ -8,7 +9,7 @@ export async function getClients(
   const params = new URLSearchParams(query);
   const queryParams = params ? `?${params.toString()}` : '';
   try {
-    const response = await fetch(`/api/clients${queryParams}`, {
+    const response = await fetch(`${configs.NEXT_PUBLIC_BACKEND_URL}/clients${queryParams}`, {
       signal,
     });
     return response.json();

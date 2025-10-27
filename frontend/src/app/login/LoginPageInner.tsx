@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/button';
+import { configs } from '@/configs/configs';
 
 export default function LoginPageInner() {
   const router = useRouter();
@@ -14,7 +15,7 @@ export default function LoginPageInner() {
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setErr(null);
-    const r = await fetch("/api/auth/login", {
+    const r = await fetch(`${configs.NEXT_PUBLIC_BACKEND_URL}/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',

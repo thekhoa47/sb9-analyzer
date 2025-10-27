@@ -1,9 +1,10 @@
+import { configs } from '@/configs/configs';
 import { PropertyAnalysisOut } from '@/types/PropertyAnalysis';
 
 export async function postPropertyAnalysisFromAddress(
   address: string
 ): Promise<PropertyAnalysisOut> {
-  const response = await fetch('/api/analyze-property-from-address', {
+  const response = await fetch(`${configs.NEXT_PUBLIC_BACKEND_URL}/analyze-property-from-address`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ address_in: address }),

@@ -1,8 +1,9 @@
 import { FormValues } from '@/app/admin/clients/formSchema';
+import { configs } from '@/configs/configs';
 import { NewClient } from '@/types/NewClient';
 
 export async function onboardNewClient(payload: FormValues): Promise<NewClient> {
-  const response = await fetch("/api/clients", {
+  const response = await fetch(`${configs.NEXT_PUBLIC_BACKEND_URL}/clients`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
