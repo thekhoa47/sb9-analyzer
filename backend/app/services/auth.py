@@ -40,13 +40,14 @@ def verify_credentials(username: str, password: str) -> bool:
 
 def set_session_cookie(response: Response, token: str) -> None:
     response.set_cookie(
-        key=settings.SESSION_COOKIE_NAME,
-        value=token,
-        max_age=settings.SESSION_AGE,
+        key=settings.SESSION_COOKIE_NAME,  # "HannahAdmin"
+        value=token,  # whatever you sign
         httponly=True,
-        secure=settings.SESSION_COOKIE_SECURE,
-        samesite="lax",
+        secure=True,
+        samesite="Lax",  # or "None" if you're doing cross-site POSTs with credentials
+        domain=".hannahanhdao.com",  # <-- now this matters
         path="/",
+        max_age=settings.SESSION_AGE,
     )
 
 

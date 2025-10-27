@@ -6,9 +6,13 @@ export async function middleware(req: NextRequest) {
 
   const res = await fetch(url, {
     headers: { cookie: req.headers.get('cookie') || '' },
+    redirect: 'manual',
   });
 
-  if (res.ok) return NextResponse.next();
+  // your backend returns 204 if authenticated
+  if (res.status === 200 || res.status === 204) {
+    return NextResponse.next();
+  }
 
   const redirectUrl = req.nextUrl.clone();
   redirectUrl.pathname = '/login';
@@ -16,4 +20,6 @@ export async function middleware(req: NextRequest) {
   return NextResponse.redirect(redirectUrl);
 }
 
-export const config = { matcher: ['/admin/:path*'] };
+export const config = {
+  matcher: ['/admin/:path*'],
+};
