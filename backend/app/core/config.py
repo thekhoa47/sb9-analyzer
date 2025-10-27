@@ -9,10 +9,10 @@ if not os.getenv("GOOGLE_CLOUD_PROJECT"):
 
 
 class Settings(BaseModel):
-    PORT: int = int(os.getenv("PORT", "8080"))
+    PORT: int = int(os.getenv("PORT", "8000"))
     ENV: str = os.getenv("ENV", "dev")
 
-    BASE_URL: str = os.getenv("BASE_URL", "http://127.0.0.1:8080/api")
+    BASE_URL: str = os.getenv("BASE_URL", "http://127.0.0.1:8000/api")
     DATABASE_URL: str = os.getenv("DATABASE_URL")
     DATABASE_URL_MIGRATIONS: str = os.getenv("DATABASE_URL_MIGRATIONS")
 
