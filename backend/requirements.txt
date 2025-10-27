@@ -1,5 +1,6 @@
 aiosmtplib==4.0.2
 alembic==1.16.5
+bcrypt==5.0.0
 boto3==1.40.10
 fastapi==0.116.1
 fastapi-pagination==0.14.0
