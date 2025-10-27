@@ -9,7 +9,7 @@ if not os.getenv("GOOGLE_CLOUD_PROJECT"):
 
 
 class Settings(BaseModel):
-    PORT: int = int(os.getenv("PORT", "8000"))
+    PORT: int = int(os.getenv("PORT", "8080"))
     ENV: str = os.getenv("ENV", "dev")
 
     BASE_URL: str = os.getenv("BASE_URL", "http://localhost:8000/api")

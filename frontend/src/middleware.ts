@@ -1,11 +1,9 @@
 import { NextResponse, NextRequest } from 'next/server';
-import { configs } from './configs/configs';
 
 export async function middleware(req: NextRequest) {
   const url = new URL("/api/auth/session", req.url);
 
   const res = await fetch(url, {
-    // forward cookies from the browser to the same-origin session endpoint
     headers: { cookie: req.headers.get("cookie") || "" },
   });
 

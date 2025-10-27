@@ -12,7 +12,7 @@ export default function Home() {
 
   const handleAnalyzeClick = () => {
     const trimmedAddress = address.trim();
-    if (trimmedAddress) return;
+    if (!trimmedAddress) return;
     reset();
     mutate(trimmedAddress);
   };
