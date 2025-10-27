@@ -7,6 +7,7 @@ GeoAlchemy2==0.18.0
 google-cloud-tasks>=2.16.0
 greenlet==3.2.4
 gunicorn==23.0.0
+itsdangerous==2.2.0
 Jinja2==3.1.6
 matplotlib==3.10.6
 openai==1.102.0
