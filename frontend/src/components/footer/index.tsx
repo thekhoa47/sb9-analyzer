@@ -8,7 +8,7 @@ import { TbTools } from "react-icons/tb";
 const appLinks = [
   { href: '/', label: 'Tool', icon: < TbTools/> },
   { href: '/properties', label: 'Analyzed Properties', icon: <FaChartPie /> },
-  { href: '/listings', label: 'Active Listings', icon: <FaHouseFlag /> },
+  // { href: '/listings', label: 'Active Listings', icon: <FaHouseFlag /> },
   { href: '/admin', label: 'Admin Panel', icon: <FaUserShield /> },
 ];
 
