@@ -41,7 +41,7 @@ steps:
         '--service-account','real-estate-backend-sa@$PROJECT_ID.iam.gserviceaccount.com',
         '--update-secrets=/tmp/runtime.env=real-estate-backend-env:latest',
         '--port','8080',
-        '--memory','1Gi',
+        '--memory','2Gi',
         '--cpu','1',
         '--min-instances','0',           # <— explicit scale to zero
         '--max-instances','10',          # tune as you like
