@@ -31,4 +31,4 @@ USER appuser
 
 ENTRYPOINT ["/app/entrypoint.sh"]
 # Use --chdir / (then app.main:app) instead of /app (main:app) because otherwise, we will run into import error for any "from app.something.something import ..."
-CMD ["sh","-c","exec gunicorn -k uvicorn.workers.UvicornWorker --chdir / --bind 0.0.0.0:${PORT:-8080} --workers 1 app.main:app"]
+CMD ["sh","-c","exec gunicorn -k uvicorn.workers.UvicornWorker --chdir / --bind 0.0.0.0:${PORT:-8080} --workers 1 --timeout 120 app.main:app"]
